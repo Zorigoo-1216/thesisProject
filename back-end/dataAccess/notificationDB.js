@@ -1,6 +1,6 @@
 const Notification = require('../models/Notification');
 
-const sendJobMatchNotification = async (userId, job) => {
+const notifyEligibleUsers = async (userId, job) => {
     const message = `Танд тохирох ажил байна: ${job.title}, Байршил: ${job.location}`;
     return await Notification.create({
         userId,
@@ -12,4 +12,10 @@ const sendJobMatchNotification = async (userId, job) => {
       });
 };
 
-module.exports = { sendJobMatchNotification };
+const createNotification = async (notification) => {
+  return await Notification.create(notification);
+}
+const createManyNotification = async (notifications) => {
+  return await Notification.insertMany(notifications);
+}
+module.exports = { notifyEligibleUsers , createNotification, createManyNotification };

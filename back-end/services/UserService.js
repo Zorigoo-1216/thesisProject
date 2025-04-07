@@ -1,49 +1,55 @@
 const bcrypt = require('bcryptjs');
 const userDB = require('../dataAccess/userDB');
-const viewUserDTO = require('../viewModels/viewUserDTO')
+const jobDB = require('../dataAccess/jobDB');
+const { generateToken } = require('../utils/tokenUtils');
+const viewUserDTO = require('../viewModels/viewUserDTO');
+const jwt = require('jsonwebtoken');
 
 // ------------------------------Login and Register----------------------------------
 
-const registerUser = async (user) => {
-  if (!user.firstName || !user.lastName || !user.phone || !user.password || !user.role) {
-    throw new Error('All required fields must be provided.');
-}
-  //const existsByEmail = await userDB.checkUserbyEmail(user.email);
-  const existsByPhone = await userDB.checkUserbyPhoneNumber(user.phone);
+const registerUser = async ({ firstName, lastName, phone, password, role, gender }) => {
+  if (!firstName || !lastName || !phone || !password || !role || !gender) {
+    throw new Error('Бүх талбарыг бөглөнө үү');
+  }
 
+  const existsByPhone = await userDB.checkUserbyPhoneNumber(phone);
   if (existsByPhone) {
     throw new Error('User already exists');
   }
 
-  user.passwordHash = await hashPassword(user.password);
-  delete user.password;
+  const passwordHash = await hashPassword(password);
+  const registeredUser = await userDB.createUser({ firstName, lastName, phone, role, gender, passwordHash });
 
-  //return await userDB.createUser(user);
-  regsiteredUser = await userDB.createUser(user);
-  if(regsiteredUser) return "successfully registered";
+  const token = generateToken(registeredUser._id);
+  return { message: 'Амжилттай бүртгэгдлээ', token, user: new viewUserDTO(registeredUser) };
 };
 
-// Login by Email
 const loginByEmail = async (email, password) => {
-  const user = await userDB.getUserbyEmail(email);
+  const user = await userDB.getUserByEmailFull(email); // шинэ функц, доор нэмнэ
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     throw new Error('Invalid credentials');
   }
+
   user.lastActiveAt = new Date();
   await user.save();
- return new viewUserDTO(user);
+
+  const token = generateToken(user._id);
+  return { message: 'Амжилттай нэвтэрлээ', token, user: new viewUserDTO(user) };
 };
 
-// Login by Phone
 const loginByPhone = async (phone, password) => {
-  const user = await userDB.getUserByPhone(phone);
+  const user = await userDB.getUserByPhoneFull(phone); // шинэ функц, доор нэмнэ
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     throw new Error('Invalid credentials');
   }
+
   user.lastActiveAt = new Date();
   await user.save();
-  return new viewUserDTO(user);
+
+  const token = generateToken(user._id);
+  return { message: 'Амжилттай нэвтэрлээ', token, user: new viewUserDTO(user) };
 };
+
 
 // Hash Password
 const hashPassword = async (password) => {
@@ -54,19 +60,27 @@ const hashPassword = async (password) => {
 // ------------------------------Manage profile----------------------------------
 
 
+const getProfile = async (userId) => {
+  const user = await userDB.getProfileById(userId);
+  if (!user) throw new Error('Хэрэглэгч олдсонгүй');
+  return user;
+};
 
-const updateUserFields = async (userId, profileUpdates) => {
+const getUserByPhone = async (phone) => {
+  const user = await userDB.getUserByPhone(phone); // энэ нь viewUserDTO буцаадаг
+  return user;
+};
+
+const updateProfile = async (userId, profileUpdates) => {
   if (!userId) throw new Error("User ID is required");
-  
-  console.log('Updating user fields:', profileUpdates);
   const updatedUser =  await userDB.updateUserFields(userId, profileUpdates);
-  return new viewUserDTO(updatedUser);
+  return updatedUser
 };
 
 
 const verifyUser = async (userId) => {
   var verifiedUser = await userDB.verifyUser(userId);
-  return new viewUserDTO(verifiedUser);
+  return verifiedUser;
 };
 
 
@@ -81,7 +95,9 @@ module.exports = {
   registerUser,
   loginByEmail,
   loginByPhone,
+  getProfile,
   verifyUser,
-  updateUserFields,
-  deleteUser
+  updateProfile,
+  deleteUser,
+  getUserByPhone
 };

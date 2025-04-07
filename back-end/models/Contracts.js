@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const contractSchema = new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' },
   employerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   workerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

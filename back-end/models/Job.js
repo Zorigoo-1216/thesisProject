@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const jobSchema = new mongoose.Schema({
-  job_id: mongoose.Schema.Types.ObjectId,
   employerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   title: String,
   description: [String],
@@ -17,15 +16,21 @@ const jobSchema = new mongoose.Schema({
     mealIncluded: Boolean,
     bonusIncluded: Boolean
   },
+  seeker :{type : String, enum: ['individual', 'company']},
+  capacity: Number,
+  branch: { type: String, enum: ['Cleaning', 'Building', 'Transport'] },
   jobType: { type: String, enum: ['hourly', 'part_time', 'full_time'] },
-  branchType: String,
   level: { type: String, enum: ['none', 'mid', 'high'] },
   possibleForDisabled: Boolean,
-  status: { type: String, enum: ['open', 'closed'] },
+  status: { type: String, enum: ['open', 'closed', 'working', 'deleted', 'completed'] },
   startDate: Date,
   endDate: Date,
   createdAt: { type: Date, default: Date.now },
-  updatedAt: Date
+  endedAt: Date,
+  updatedAt: Date,
+  haveInterview: { type: Boolean, default: false },
+  employees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],      // Сонгогдсон ажилчид
+  applications: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Application' }] // Бүх өргөдөл
 });
 
 module.exports = mongoose.model('Job', jobSchema);

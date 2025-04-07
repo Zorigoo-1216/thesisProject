@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
   avatar: { type: String },
   verificationCode: { type: String },
   firstName: { type: String, required: true },
@@ -47,11 +46,12 @@ const userSchema = new mongoose.Schema({
   },
   averageRating: {
     overall: { type: Number, default: 0 },
-    byBranch: {
-      Cleaning: { type: Number, default: 0 },
-      Building: { type: Number, default: 0 },
-      Transport: { type: Number, default: 0 },
+    byBranch: [
+      {
+      brachType : String,
+      score: Number,
     }
+  ]
   }   
 });
 

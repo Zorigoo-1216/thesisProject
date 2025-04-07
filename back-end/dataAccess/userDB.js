@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const viewUserDTO = require('../viewModels/viewUserDTO');
 //-----------------------login хэсгийн логик------------------------
 // Email хаяг бүртгэлтэй байгаа эсэхийг шалгах
 const checkUserbyEmail = async (email) => {
@@ -21,28 +22,39 @@ const checkPasswordByPhoneNumber = async (phoneNumber, passwordHash) => {
   return await User.findOne({ phoneNumber, passwordHash });
 };
 
-
-
 // хэрэглэгчийн мэдээллийг авах
 const getProfileByPhone = async (email) => {
-  return await User.findOne({ email }, 'profile');
+  const user =  await User.findOne({ email }, 'profile');
+  return new viewUserDTO(user);
 };
 const getProfileByEmail =async (email) => {
-  return await User.findOne({ email }, 'profile');
+  const user=  await User.findOne({ email }, 'profile');
+  return new viewUserDTO(user);
 };
+const getProfileById = async (userId) => {
+  const user = await User.findById(userId);
+  return new viewUserDTO(user);
+}
 const getUserByPhone = async (phone) => {
-  return await User.findOne({ phone });
+  const user= await User.findOne({ phone });
+  return new viewUserDTO(user);
 };
 const getUserByEmail = async (email) => {
-  return await User.findOne({ email });
+  const user =  await User.findOne({ email });
+  return new viewUserDTO(user);
+}
+const getUserById = async (userId) => {
+  return await User.findById(userId);
 }
 // хэрэглэгчийн мэдээллийг шинэчлэх
 const updateUserFields = async (userId, profileUpdates) => {
-  return await User.findByIdAndUpdate(userId, { $set: profileUpdates }, { new: true });
+  const user = await User.findByIdAndUpdate(userId, { $set: profileUpdates }, { new: true });
+  return new viewUserDTO(user);
 }
 // хэрэглэгчийн бүртгэлийг баталгаажуулах
 const verifyUser = async (userId) => {
-  return await User.findByIdAndUpdate(userId, { isVerified: true });
+  const user= await User.findByIdAndUpdate(userId, { isVerified: true });
+  return new viewUserDTO(user);
 };
 // хэрэглэгчийн бүртгэлийгч устгах
 const deleteUser = async (userId) => {
@@ -51,16 +63,27 @@ const deleteUser = async (userId) => {
 
 // Хэрэглэгчийн профайлыг устгах
 const deleteProfile = async (userId) => {
-  return await User.findByIdAndUpdate(userId, { profile: null });
+  const user = await User.findByIdAndUpdate(userId, { profile: null });
+  return new viewUserDTO(user);
+}
+const getUserByEmailFull = async (email) => {
+  return await User.findOne({ email });
+};
+
+const getUserByPhoneFull = async (phone) => {
+  return await User.findOne({ phone });
+};
+const findUsersByQuery = async (query) => {
+  return await User.find(query);
 }
 // Ажилд тохирох ажилчдыг олох
-const getEligibleUsersForJob = async (createdJob) => {
-  return await User.find({
-    isActive: true,
-    'profile.skills': { $in: job.requirements },
-    scheduledJobs: { $ne: job._id } // no job conflict
-  });
-}
+// const findUsersByQuery = async (query) => {
+//   return await User.find(query);
+// };
+
+// const getUserById = async (userId) => {
+//   return await User.findById(userId);
+// }
 
 module.exports = {
   checkUserbyEmail,
@@ -68,14 +91,17 @@ module.exports = {
   createUser,
   checkPasswordByEmail,
   checkPasswordByPhoneNumber,
-  getUserByEmail,
-  getUserByPhone,
-  updateUserFields,
-  deleteProfile,
-  verifyUser,
-  deleteUser,
-  updateUserFields,
   getProfileByPhone,
   getProfileByEmail,
-  getEligibleUsersForJob
+  getProfileById,
+  getUserByPhone,
+  getUserByEmail,
+  updateUserFields,
+  verifyUser,
+  deleteUser,
+  deleteProfile,
+  getUserById,
+  getUserByEmailFull,
+  getUserByPhoneFull,
+  findUsersByQuery
 };

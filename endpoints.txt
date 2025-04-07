@@ -1,0 +1,50 @@
+// ✅ AUTHENTICATION
+POST    /api/auth/register               - Хэрэглэгч бүртгүүлэх
+POST    /api/auth/login                  - Нэвтрэх
+GET     /api/auth/profile                - Нэвтэрсэн хэрэглэгчийн профайл
+PUT     /api/auth/profile                - Профайл шинэчлэх
+
+// ✅ JOB MANAGEMENT
+GET     /api/jobs                        - Бүх идэвхтэй ажил
+GET     /api/jobs/search                 - Шүүлтүүрээр ажил хайх
+GET     /api/jobs/:id                    - Нэг ажлын дэлгэрэнгүй
+POST    /api/jobs/create                 - Ажлын зар үүсгэх
+PUT     /api/jobs/:id/edit               - Ажлын зар засах
+DELETE  /api/jobs/:id                    - Ажлын зар устгах
+GET     /api/jobs/employer/mine          - Ажил олгогчийн ажлууд
+
+// ✅ APPLICATIONS
+POST    /api/applications/apply                  - Ажилд өргөдөл илгээх
+GET     /api/applications/myapplications         - Миний илгээсэн ажлууд
+GET     /api/applications/myallapplications      - Миний бүх илгээсэн түүх
+GET     /api/applications/job/:jobId/applications - Тухайн ажилд илгээсэн хүмүүс
+POST    /api/applications/job/:id/select         - Сонгогдсон ажилчид бүртгэх
+POST    /api/applications/job/:id/interview      - Интервьюд орох ажилчид
+
+// ✅ INTERVIEWS
+POST    /api/interviews/schedule             - Интервью хуваарь үүсгэх
+GET     /api/interviews/my                   - Миний ярилцлагууд
+GET     /api/interviews/job/:jobId           - Ажлын ярилцлагын хуваарь
+DELETE  /api/interviews/:id                  - Нэг ярилцлагын цаг устгах
+DELETE  /api/interviews/job/:jobId/all       - Ажлын бүх ярилцлага устгах
+POST    /api/interviews/generate             - Автомат ярилцлага үүсгэх
+GET     /api/interviews/calendar/:jobId      - Календар хэлбэрээр харах
+GET     /api/interviews/applicant/:id        - Хүний ярилцлагууд харах
+POST    /api/interviews/confirm/:id          - Тэнцсэн ажилчдыг баталгаажуулах
+
+// ✅ RATING SYSTEM
+POST    /api/ratings/submit                  - Үнэлгээ өгөх
+GET     /api/ratings/job/:jobId              - Ажлын үнэлгээ харах
+
+// ✅ NOTIFICATIONS
+GET     /api/notifications                   - Миний мэдэгдлүүд
+POST    /api/notifications/send              - Захиалгат мэдэгдэл илгээх
+PUT     /api/notifications/:id/read          - Мэдэгдлийг уншсан төлөвт оруулах
+
+// ✅ ADMIN PANEL
+GET     /api/admin/users                     - Хэрэглэгчдийн жагсаалт
+GET     /api/admin/jobs                      - Бүх ажлууд
+GET     /api/admin/applications              - Бүх өргөдөл
+DELETE  /api/admin/users/:id                 - Хэрэглэгч устгах
+PATCH   /api/admin/users/:id/block           - Хэрэглэгч блоклох
+GET     /api/admin/stats                     - Системийн статистик
