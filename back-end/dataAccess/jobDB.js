@@ -120,7 +120,12 @@ const getJobLisForUser = async (user, filters) => {
   const findUsersByQuery = async (query) => {
     return await User.find(query);
   };
-  
+  const addEmployeeToJob = async (jobId, employeeId) => {
+    const job = await Job.findById(jobId);
+    if (!job) throw new Error("Job not found");
+    job.employees.push(employeeId);
+    return await job.save();
+  } 
 module.exports = {
     createJob, 
     getdJoblist, 
@@ -134,6 +139,6 @@ module.exports = {
     getMyPostedJobs,
     getEmployeesByJob,
     cancelApplication,
-    findUsersByQuery
-    
+    findUsersByQuery,
+    addEmployeeToJob,
 };

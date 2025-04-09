@@ -5,17 +5,22 @@ const userSchema = new mongoose.Schema({
   verificationCode: { type: String },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
-  email: { type: String},
+  email: { type: String },
   phone: { type: String, unique: true, required: true },
-  passwordHash: { type: String, required: true }, 
-  role: { type: String, enum: ['individual', 'company', 'admin'], required: true }, 
-  gender: { type: String, enum: ['male', 'female', 'other'], required: true }, 
+  passwordHash: { type: String, required: true },
+
+  role: { type: String, enum: ['individual', 'company', 'admin'], required: true },
+  companyName: { type: String },                 // Зөвхөн role === company үед ашиглана
+  companyType: { type: String },                 // Хуулийн этгээдийн төрөл гэх мэт
+  gender: { type: String, enum: ['male', 'female', 'other'], required: true },
+
   isVerified: { type: Boolean, default: false },
   isOnline: { type: Boolean, default: false },
   lastActiveAt: { type: Date, default: Date.now },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date },
-  state : { type:String, enum: ['Active', 'Inactive', 'Blocked'], default: 'Active' },
+  state: { type: String, enum: ['Active', 'Inactive', 'Blocked'], default: 'Active' },
+
   schedule: [
     {
       jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' },
@@ -23,7 +28,6 @@ const userSchema = new mongoose.Schema({
       endDate: Date
     }
   ],
-
   completedJobs: [
     {
       jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' },
@@ -42,17 +46,17 @@ const userSchema = new mongoose.Schema({
     additionalSkills: [String],
     experienceLevel: { type: String, enum: ['beginner', 'intermediate', 'expert'] },
     languageSkills: [String],
-    isDisabledPerson: { type: Boolean, default: false}, 
+    isDisabledPerson: { type: Boolean, default: false }
   },
   averageRating: {
     overall: { type: Number, default: 0 },
     byBranch: [
       {
-      brachType : String,
-      score: Number,
-    }
-  ]
-  }   
+        branchType: String,
+        score: Number,
+      }
+    ]
+  }
 });
 
 module.exports = mongoose.model('User', userSchema);

@@ -157,6 +157,14 @@ const cancelApplication = async (jobId, userId) => {
   await Job.findByIdAndUpdate(jobId, { $pull: { applications: application._id } });
   return "Application canceled";
 }
+
+const updateStatus = async (jobId, userId, status) => {
+  const application = await Application.findOne({ jobId: jobId, userId: userId });
+  if (!application) throw new Error("Application not found");
+  application.status = status;
+  await application.save();
+  return "Application status updated";
+}
   module.exports = {
     createApplication, 
     getAllAppliedJobsByUserId,
@@ -170,6 +178,6 @@ const cancelApplication = async (jobId, userId) => {
     getMyAllApplications,
     getInterviewUsers,
     getCandidatesByJob,
-    cancelApplication
-
+    cancelApplication,
+    updateStatus
 };

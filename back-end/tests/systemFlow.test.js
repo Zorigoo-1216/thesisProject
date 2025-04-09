@@ -1,3 +1,6 @@
+const dotenv = require('dotenv');
+dotenv.config({ path: '.env.test' });
+
 const request = require('supertest');
 const app = require('../app'); // now clean and DB-agnostic
 const mongoose = require('mongoose');
@@ -82,6 +85,10 @@ describe('📌 Full System Flow Test', () => {
     branch: 'Transport',
     jobType: 'hourly',
     level: 'none',
+    workStartTime: '09:00', // or whatever format your schema expects
+    workEndTime: '18:00',
+    breakStartTime: '12:00',
+    breakEndTime: '13:00',
     possibleForDisabled: true,
     haveInterview: true, // 🟢 Interview field added here
     startDate: new Date(),
@@ -229,3 +236,6 @@ describe('📌 Full System Flow Test', () => {
 }, 15000);
 
 });
+// test('placeholder', () => {
+//     expect(true).toBe(true);
+//   });
