@@ -1,32 +1,36 @@
-// const express = require('express');
-// const router = express.Router();
-// const contractController = require('../controllers/contractController');
-// const authMiddleware = require('../middleware/authMiddleware');
+const express = require('express');
+const router = express.Router();
+const contractController = require('../controllers/contractController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-// // 1. Create contract from template
-// router.post('/create', authMiddleware, contractController.createContract);
+// Загвар үүсгэх
+router.post('/createtemplate', authMiddleware, contractController.createContractTemplate);
 
-// // 2. Get contract summary Worker and employer views summary
-// router.get('/:id/summary', authMiddleware, contractController.getContractSummary);
+// Загварын хураангуй
+router.get('/template/:id/summary', authMiddleware, contractController.getContractTemplateSummary);
 
-// // 3. Edit contract (employer edits)
-// router.put('/:id/edit', authMiddleware, contractController.editContract);
+// Загвар edit хийх
+router.put('/template/:id/edit', authMiddleware, contractController.editContract);
 
-// // 4. Employer signs contract
-// router.put('/:id/employer-sign', authMiddleware, contractController.employerSignContract);
+// Ажил олгогч гарын үсэг зурна
+router.post('/template/:id/employer-sign', authMiddleware, contractController.employerSignContract);
 
-// // 5. Send contract to selected employees (accepted workers)
-// router.post('/:id/send', authMiddleware, contractController.sendContractToWorkers);
+// Ажил олгогч гэрээг ажилчдад илгээнэ
+router.post('/template/:id/send', authMiddleware, contractController.sendContractToWorkers);
 
-// // 6. Worker and employer views contract
-// router.get('/:id', authMiddleware, contractController.getContractById);
+// Гэрээ үзэх
+router.get('/:id', authMiddleware, contractController.getContractById);
 
-// // 7. Worker signs contract
-// router.put('/:id/worker-sign', authMiddleware, contractController.workerSignContract);
+// Гэрээний хураангуй
+router.get('/:id/summary', authMiddleware, contractController.getContractSummary);
 
-// // 8. Worker rejects contract
-// router.put('/:id/reject', authMiddleware, contractController.workerRejectContract);
+// Ажилтан гарын үсэг зурна
+router.put('/:id/worker-sign', authMiddleware, contractController.workerSignContract);
 
-// // worker and employer view after contract are completed
-// router.get('/contracthistory', authMiddleware, contractController.getContractHistory);
-// module.exports = router;
+// Ажилтан татгалзана
+router.put('/:id/reject', authMiddleware, contractController.workerRejectContract);
+
+// Гэрээний түүх
+router.get('/contracthistory', authMiddleware, contractController.getContractHistory);
+
+module.exports = router;

@@ -35,6 +35,10 @@ const sendapplyNotToEmployer = async (application) => {
   };
   return await NotificationDb.createNotification(notification);
 }
+const createNotification = async (notification) => {
+  return await NotificationDb.createNotification(notification);
+}
+
 module.exports = {
   sendBulkNotifications, sendapplyNotToEmployer
 };

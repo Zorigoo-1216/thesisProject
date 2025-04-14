@@ -76,6 +76,39 @@ const getUserByPhoneFull = async (phone) => {
 const findUsersByQuery = async (query) => {
   return await User.find(query);
 }
+
+const updateAverageRating = async (userId) => {
+  const ratings = await Rating.find({ toUserId: userId });
+
+  if (ratings.length === 0) return;
+
+  const branchScores = {};
+  const branchCounts = {};
+
+  ratings.forEach(r => {
+    const score = r.manualRating.score;
+    const branch = r.branchType;
+
+    branchScores[branch] = (branchScores[branch] || 0) + score;
+    branchCounts[branch] = (branchCounts[branch] || 0) + 1;
+  });
+
+  const byBranch = Object.keys(branchScores).map(branch => ({
+    branchType: branch,
+    score: +(branchScores[branch] / branchCounts[branch]).toFixed(1)
+  }));
+
+  const overall = ratings.reduce((sum, r) => sum + r.manualRating.score, 0) / ratings.length;
+
+  await User.findByIdAndUpdate(userId, {
+    $set: {
+      averageRating: {
+        overall: +overall.toFixed(1),
+        byBranch
+      }
+    }
+  });
+};
 // Ажилд тохирох ажилчдыг олох
 // const findUsersByQuery = async (query) => {
 //   return await User.find(query);
@@ -103,5 +136,6 @@ module.exports = {
   getUserById,
   getUserByEmailFull,
   getUserByPhoneFull,
-  findUsersByQuery
+  findUsersByQuery,
+  updateAverageRating
 };

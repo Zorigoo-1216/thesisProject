@@ -1,10 +1,11 @@
 const mongoose = require('mongoose');
+const contractTemplate = require('./contractTemplate');
 
 const contractSchema = new mongoose.Schema({
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job' },
   employerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   workerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-
+  contractTemplateId: { type: mongoose.Schema.Types.ObjectId, ref: 'ContractTemplate' },
   contractNumber: { type: Number, unique: true }, // автоматаар өсөх тоо
   templateId: { type: String },
   contractType: {

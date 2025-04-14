@@ -1,100 +1,81 @@
-// const contractService = require('../services/contractService');
+const contractService = require('../services/contractService');
 
-// const createContract = async (req, res) => {
-//   try {
-//     const { jobId, templateId, contractCategory } = req.body;
-//     const contract = await contractService.createContract({
-//       jobId,
-//       employerId: req.user.id,
-//       templateId,
-//       contractCategory
-//     });
-//     res.status(201).json({ message: 'Гэрээ амжилттай үүсгэлээ', contract });
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
+const createContractTemplate = async (req, res) => {
+  const employerId = req.user.id;
+  const { jobId, templateName } = req.body;
+  const result = await contractService.createContractTemplate(employerId, { jobId, templateName });
+  res.status(201).json(result);
+};
 
-// const getContractSummary = async (req, res) => {
-//   try {
-//     const summary = await contractService.getContractSummary(req.params.id);
-//     res.status(200).json({ summary });
-//   } catch (err) {
-//     res.status(404).json({ error: err.message });
-//   }
-// };
 
-// const editContract = async (req, res) => {
-//   try {
-//     const updated = await contractService.editContract(req.params.id, req.body.contractText);
-//     res.status(200).json({ message: 'Гэрээ шинэчлэгдлээ', contract: updated });
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
+const getContractTemplateSummary = async (req, res) => {
+  const userId  = req.user.id;
+  const contractId = req.params.id;
+  const summary = await contractService.getSummary(contractId, userId);
+  res.json(summary);
+};
 
-// const employerSignContract = async (req, res) => {
-//   try {
-//     await contractService.employerSignContract(req.params.id);
-//     res.status(200).json({ message: 'Гэрээнд ажил олгогч гарын үсэг зурлаа' });
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
+const editContract = async (req, res) => {
+  const userId = req.user.id;
+  const contractTemplateId = req.params.id;
+  const data = req.body;
+  const updated = await contractService.editContract(contractTemplateId, userId, data);
+  res.json(updated);
+};
 
-// const sendContractToWorkers = async (req, res) => {
-//   try {
-//     const result = await contractService.sendContractToWorkers(req.params.id, req.body.workerIds);
-//     res.status(200).json({ message: 'Гэрээ ажилчдад илгээгдлээ', result });
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
 
-// const getContractById = async (req, res) => {
-//   try {
-//     const contract = await contractService.getContractById(req.params.id);
-//     res.status(200).json({ contract });
-//   } catch (err) {
-//     res.status(404).json({ error: err.message });
-//   }
-// };
+const sendContractToWorkers = async (req, res) => {
+  const employerId = req.user.id;
+  const { id: contractTemplateId } = req.params;
+  const result = await contractService.sendToWorkers(employerId, contractTemplateId);
+  res.json(result);
+};
+const employerSignContract = async (req, res) => {
+  const employerId = req.user.id;
+  const { id: contractTemplateId } = req.params;
+  const result = await contractService.signByEmployer(contractTemplateId, employerId);
+  res.json(result);
+};
 
-// const workerSignContract = async (req, res) => {
-//   try {
-//     await contractService.workerSignContract(req.params.id, req.user.id);
-//     res.status(200).json({ message: 'Гэрээнд ажилтан гарын үсэг зурлаа' });
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
+const getContractSummary = async (req, res) => {
+  const contractId = req.params.id;
+  const result = await contractService.getContractSummary(contractId);
+  res.json(result);
+};
 
-// const workerRejectContract = async (req, res) => {
-//   try {
-//     await contractService.workerRejectContract(req.params.id);
-//     res.status(200).json({ message: 'Гэрээг ажилтан татгалзлаа' });
-//   } catch (err) {
-//     res.status(400).json({ error: err.message });
-//   }
-// };
 
-// const getContractHistory = async (req, res) => {
-//   try {
-//     const history = await contractService.getContractHistory(req.user.id);
-//     res.status(200).json({ contracts: history });
-//   } catch (err) {
-//     res.status(404).json({ error: err.message });
-//   }
-// };
+const getContractById = async (req, res) => {
+  const contract = await contractService.getById(req.params.id, req.user.id);
+  res.json(contract);
+};
 
-// module.exports = {
-//   createContract,
-//   getContractSummary,
-//   editContract,
-//   employerSignContract,
-//   sendContractToWorkers,
-//   getContractById,
-//   workerSignContract,
-//   workerRejectContract,
-//   getContractHistory
-// };
+const workerSignContract = async (req, res) => {
+  const workerId = req.user.id;
+  const { id: contractId } = req.params;
+  const result = await contractService.signByWorker(workerId, contractId);
+  res.json(result);
+};
+
+const workerRejectContract = async (req, res) => {
+  const result = await contractService.rejectByWorker(req.params.id, req.user.id);
+  res.json(result);
+};
+
+const getContractHistory = async (req, res) => {
+  const result = await contractService.getContractHistory(req.user.id);
+  res.json(result);
+};
+
+
+module.exports = {
+    createContractTemplate,
+  getContractSummary,
+  editContract,
+  employerSignContract,
+  sendContractToWorkers,
+  getContractById,
+  workerSignContract,
+  workerRejectContract,
+  getContractHistory,
+  getContractTemplateSummary
+};

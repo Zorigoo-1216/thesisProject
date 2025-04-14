@@ -1,99 +1,105 @@
-// // services/contractService.js
-// const contractDB = require('../dataAccess/contractDB');
-// const jobDB = require('../dataAccess/jobDB');
-// const userDB = require('../dataAccess/userDB');
-// const applicationDB = require('../dataAccess/applicationDB');
-// const { generateContractSummary } = require('../utils/contractUtils');
-// const { readTemplateAndInjectData, generateDocxFile } = require('../utils/docxGenerator');
+const contractDB = require('../dataAccess/contractDB');
+const jobDB = require('../dataAccess/jobDB');
+const userDB = require('../dataAccess/userDB');
+const parser = require('../utils/contractParser');
+const fs = require('fs');
+const path = require('path');
+const createContractTemplate = async (employerId, { jobId, templateName }) => {
+  const job = await jobDB.getJobById(jobId);
+  if (!job || job.employerId.toString() !== employerId) throw new Error('Not authorized');
 
-// const createContract = async ({ jobId, employerId, templateId, contractCategory }) => {
-//   const job = await jobDB.getJobById(jobId);
-//   if (!job) throw new Error('Job not found');
+  const templatePath = path.join(__dirname, '../templates', `${templateName}.json`);
+  const templateContent = JSON.parse(fs.readFileSync(templatePath, 'utf-8'));
 
-//   const contractText = await readTemplateAndInjectData(templateId, job);
-//   const summary = generateContractSummary(contractText);
+  const parsed = parser.parseTemplate(templateContent, {
+    employer: await userDB.getUserById(employerId),
+    job
+});
+  return await contractDB.createContractTemplate({
+    jobId,
+    employerId,
+    templateName,
+    summary: parsed.summary,
+    contentText: parsed.contentText,
+    contentHTML: parsed.contentHTML,
+    contentJSON: parsed.contentJSON
+  });
 
-//   const contract = await contractDB.createContract({
-//     jobId,
-//     employerId,
-//     templateId,
-//     contractType: 'standard',
-//     contractCategory,
-//     contractText,
-//     summary
-//   });
+};
 
-//   await generateDocxFile(templateId, job, contract._id.toString());
+const getSummary = async (contractId, userId) => {
+  const contractTemplate = await contractDB.getTemplateById(contractId);
+  const job = await jobDB.getJobById(contractTemplate.jobId);
 
-//   return contract;
-// };
+  if (![contractTemplate.employerId].includes(userId) || job.employees.includes(userId) ) throw new Error('Forbidden');
+  return contractTemplate.summary;
+};
+const getContractSummary = async (contractId) => {
+  const contract = await contractDB.getById(contractId);
+  return contract.summary;
+}
+const editContract = async (id, employerId, updates) => {
+  return await contractDB.updateContractTemplate(id, employerId, updates);
+};
 
-// const getContractSummary = async (contractId) => {
-//   const contract = await contractDB.getContractById(contractId);
-//   if (!contract) throw new Error('Contract not found');
-//   return contract.summary;
-// };
+const signByEmployer = async (id, employerId) => {
+  return await contractDB.updateStatus(id, employerId, { employerSigned: true });
+};
 
-// const editContract = async (contractId, newText) => {
-//   const summary = generateContractSummary(newText);
-//   return contractDB.updateContractText(contractId, newText, summary);
-// };
 
-// const employerSignContract = async (contractId) => {
-//   return contractDB.employerSign(contractId);
-// };
+const sendToWorkers = async (contractTemplateId, employerId) => {
+  const { template, job } = await contractDB.getTemplateAndJob(contractTemplateId, employerId);
+  const employer = await userDB.getUserById(employerId);
+  const contracts = [];
 
-// const sendContractToWorkers = async (contractId, workerIds) => {
-//   const template = await contractDB.getContractById(contractId);
-//   if (!template) throw new Error('Base contract not found');
+  for (const workerId of job.employees) {
+    const worker = await userDB.getUserById(workerId);
+    const filled = parser.generateFilledContractFromTemplate(job, employer, worker);
 
-//   const contracts = [];
-//   for (const workerId of workerIds) {
-//     const newContract = await contractDB.createContract({
-//       jobId: template.jobId,
-//       employerId: template.employerId,
-//       templateId: template.templateId,
-//       workerId,
-//       contractType: 'custom',
-//       contractCategory: template.contractCategory,
-//       contractText: template.contractText,
-//       summary: template.summary
-//     });
-//     contracts.push(newContract);
-//   }
+    const contract = await contractDB.createContract({
+      ...filled,
+      jobId: job._id,
+      employerId,
+      workerId,
+      contractTemplateId,
+      contractType: 'standard',
+      contractCategory: template.templateName || 'wage-based'
+    });
 
-//   return contracts;
-// };
+    contracts.push(contract);
+  }
 
-// const getContractById = async (contractId) => {
-//   return await contractDB.getContractDetails(contractId);
-// };
+  return contracts;
+};
 
-// const workerSignContract = async (contractId, workerId) => {
-//   const contract = await contractDB.workerSign(contractId, workerId);
-//   await applicationDB.updateStatus(contract.jobId, contract.workerId, 'selected');
-//   await jobDB.addEmployeeToJob(contract.jobId, contract.workerId);
-//   return contract;
-// };
+const getById = async (id, userId) => {
+  const contract = await contractDB.getById(id);
+  if (![contract.employerId, contract.workerId].includes(userId)) throw new Error('Forbidden');
+  return contract;
+};
 
-// const workerRejectContract = async (contractId) => {
-//   return contractDB.rejectContract(contractId);
-// };
+const signByWorker = async (id, workerId) => {
+  return await contractDB.updateContractStatus(id, workerId, { workerSigned: true });
+};
 
-// const getContractHistory = async (userId) => {
-//   const user = await userDB.getUserById(userId);
-//   if (!user) throw new Error('User not found');
-//   return await contractDB.getContractsForUser(userId);
-// };
+const rejectByWorker = async (id, workerId) => {
+  return await contractDB.updateStatus(id, workerId, { rejected: true });
+};
 
-// module.exports = {
-//   createContract,
-//   getContractSummary,
-//   editContract,
-//   employerSignContract,
-//   sendContractToWorkers,
-//   getContractById,
-//   workerSignContract,
-//   workerRejectContract,
-//   getContractHistory
-// };
+const getContractHistory = async (userId) => {
+  return await contractDB.getHistory(userId);
+};
+
+
+module.exports = { 
+    createContractTemplate, 
+    getSummary, 
+    editContract, 
+    signByEmployer, 
+    sendToWorkers, 
+    getById, 
+    signByWorker, 
+    rejectByWorker, 
+    getContractHistory,
+    getContractSummary,
+  };
