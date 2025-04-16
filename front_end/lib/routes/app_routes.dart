@@ -1,0 +1,69 @@
+import 'package:flutter/material.dart';
+import '../screens/start/splash_screen.dart';
+import '../screens/start/start_screen.dart';
+import '../screens/start/login_screen.dart';
+import '../screens/start/register_screen.dart';
+
+import '../screens/main/employer_screen.dart';
+//import '../screens/main/home_screen.dart';
+import '../screens/main/job_detail_screen.dart';
+import '../screens/main/job_filter_sheet_screen.dart';
+import '../screens/main/job_request_screen.dart';
+import '../screens/main/joblist_screen.dart';
+import '../screens/main/job_contract_screen.dart';
+// Add other imports...
+import '../screens/main/main_wrapper.dart';
+import '../screens/main/rate_employee_screen.dart';
+import '../screens/main/work_progress_screen.dart';
+import '../screens/main/employee_contract_screen.dart';
+import '../screens/main/employee_work_progress_screen.dart';
+import '../screens/main/employee_payment_screen.dart';
+import '../screens/main/employer_rate_screen.dart';
+//import '../screens/main/profile_screen.dart';
+import '../screens/main/profile_detail_screen.dart';
+import '../screens/main/job_histoty_screen.dart';
+import '../screens/main/created_job_history.dart';
+import '../screens/main/contract_history_screen.dart';
+import '../screens/main/sent_application_history.dart';
+
+class AppRoutes {
+  static Map<String, WidgetBuilder> routes = {
+    '/splash': (context) => const SplashScreen(),
+    '/start': (context) => const StartScreen(),
+    '/login': (context) => const LoginScreen(),
+    '/register': (context) => const RegisterScreen(),
+    // Bottom Navigation Wrapper
+    '/home': (context) => const MainWrapper(),
+
+    '/employer': (context) => const EmployerScreen(),
+    '/job-detail': (context) => const JobDetailScreen(),
+    '/job-filter-sheet': (context) => const JobFilterSheet(),
+    //'/job-request': (context) => const JobRequestScreen(),
+    '/job-list-screen': (context) => const JobListScreen(),
+
+    '/suitable-workers':
+        (context) => const JobRequestScreen(initialTabIndex: 0),
+    '/job-request': (context) => const JobRequestScreen(initialTabIndex: 1),
+    '/interview': (context) => const JobRequestScreen(initialTabIndex: 2),
+    '/contract-candidates':
+        (context) => const JobRequestScreen(initialTabIndex: 3),
+    '/job-contract': (context) => const JobContractScreen(initialTabIndex: 0),
+    '/contract-employees':
+        (context) => const JobContractScreen(initialTabIndex: 1),
+    '/rate-employee': (context) => const RateEmployeeScreen(),
+    '/job-progress': (context) => const WorkProgressScreen(initialTabIndex: 1),
+    '/job-employees': (context) => const WorkProgressScreen(initialTabIndex: 0),
+    '/job-payment': (context) => const WorkProgressScreen(initialTabIndex: 2),
+    // main.dart or routes.dart
+    '/employee-contract': (context) => const EmployeeContractScreen(),
+    '/employee-progress': (context) => const EmployeeWorkProgressScreen(),
+    '/employee-payment': (context) => const EmployeePaymentScreen(),
+    '/employer-rate': (context) => const EmployerRateScreen(),
+    '/profile-detail': (context) => const ProfileDetailScreen(),
+    '/job-history': (context) => const JobHistoryScreen(),
+    '/created-job-history': (context) => const CreatedJobHistoryScreen(),
+    '/contract-history': (context) => const ContractHistoryScreen(),
+    '/sent-applicaiton-history':
+        (context) => const SentApplicationHistoryScreen(),
+  };
+}
