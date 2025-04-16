@@ -12,6 +12,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  final List<Map<String, dynamic>> menuItems = [
+    {"title": "Хувийн мэдээлэл", "route": "/profile-detail"},
+    {"title": "Хийсэн ажлын түүх", "route": "/job-history"},
+    {"title": "Үүсгэсэн ажлын түүх", "route": "/created-job-history"},
+    {"title": "Илгээсэн хүсэлтийн түүх", "route": "/sent-application-history"},
+    {"title": "Гэрээний түүх", "route": "/contract-history"},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       radius: 16,
                       backgroundImage: AssetImage('assets/images/avatar.png'),
                     ),
+                    SizedBox(width: 12),
                   ],
                   bottom: TabBar(
                     controller: _tabController,
@@ -53,18 +62,52 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ],
                   ),
                 ),
-                SliverToBoxAdapter(child: _profileInfo()),
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      const ProfileInfo(),
+                      const Divider(thickness: 1, color: Colors.grey),
+                    ],
+                  ),
+                ),
               ],
           body: TabBarView(
             controller: _tabController,
-            children: [_mainTab(), _scheduleTab(), _ratingTab()],
+            children: [
+              ListView.builder(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                itemCount: menuItems.length,
+                itemBuilder: (context, index) {
+                  final item = menuItems[index];
+                  return MainTabListItem(
+                    title: item['title'],
+                    route: item['route'],
+                  );
+                },
+              ),
+              _scheduleTab(),
+              _ratingTab(),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _profileInfo() {
+  Widget _scheduleTab() {
+    return const Center(child: Text("📆 Ажлын хуваарь энд гарна."));
+  }
+
+  Widget _ratingTab() {
+    return const Center(child: Text("⭐ Үнэлгээний дэлгэрэнгүй энд гарна."));
+  }
+}
+
+class ProfileInfo extends StatelessWidget {
+  const ProfileInfo({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
@@ -97,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _infoCard(String label, String value, IconData icon) {
+  static Widget _infoCard(String label, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -118,57 +161,25 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
+}
 
-  Widget _mainTab() {
-    final items = [
-      "Хувийн мэдээлэл",
-      "Хийсэн ажлын түүх",
-      "Үүсгэсэн ажлын түүх",
-      "Илгээсэн хүсэлтийн түүх",
-      "Гэрээний түүх",
-    ];
+class MainTabListItem extends StatelessWidget {
+  final String title;
+  final String route;
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(vertical: 4),
-          leading: const CircleAvatar(
-            backgroundColor: AppColors.stateBackground,
-            child: Icon(Icons.account_circle, color: AppColors.primary),
-          ),
-          title: Text(items[index], style: AppTextStyles.body),
-          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () {
-            switch (items[index]) {
-              case "Хувийн мэдээлэл":
-                Navigator.pushNamed(context, '/profile-detail');
-                break;
-              case "Хийсэн ажлын түүх":
-                Navigator.pushNamed(context, '/job-history');
-                break;
-              case "Үүсгэсэн ажлын түүх":
-                Navigator.pushNamed(context, '/created-job-history');
-                break;
-              case "Илгээсэн хүсэлтийн түүх":
-                Navigator.pushNamed(context, '/sent-applicaiton-history');
-                break;
-              case "Гэрээний түүх":
-                Navigator.pushNamed(context, '/contract-history');
-                break;
-            }
-          },
-        );
-      },
+  const MainTabListItem({super.key, required this.title, required this.route});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+      leading: const CircleAvatar(
+        backgroundColor: AppColors.stateBackground,
+        child: Icon(Icons.account_circle, color: AppColors.primary),
+      ),
+      title: Text(title, style: AppTextStyles.body),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: () => Navigator.pushNamed(context, route),
     );
-  }
-
-  Widget _scheduleTab() {
-    return const Center(child: Text("📆 Ажлын хуваарь энд гарна."));
-  }
-
-  Widget _ratingTab() {
-    return const Center(child: Text("⭐ Үнэлгээний дэлгэрэнгүй энд гарна."));
   }
 }

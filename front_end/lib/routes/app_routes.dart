@@ -54,11 +54,13 @@ class AppRoutes {
     '/job-progress': (context) => const WorkProgressScreen(initialTabIndex: 1),
     '/job-employees': (context) => const WorkProgressScreen(initialTabIndex: 0),
     '/job-payment': (context) => const WorkProgressScreen(initialTabIndex: 2),
+
     // main.dart or routes.dart
     '/employee-contract': (context) => const EmployeeContractScreen(),
     '/employee-progress': (context) => const EmployeeWorkProgressScreen(),
     '/employee-payment': (context) => const EmployeePaymentScreen(),
     '/employer-rate': (context) => const EmployerRateScreen(),
+
     '/profile-detail': (context) => const ProfileDetailScreen(),
     '/job-history': (context) => const JobHistoryScreen(),
     '/created-job-history': (context) => const CreatedJobHistoryScreen(),

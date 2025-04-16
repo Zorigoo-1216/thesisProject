@@ -6,7 +6,7 @@ const paymentSchema = new mongoose.Schema({
   jobProgressId :{type: mongoose.Schema.Types.ObjectId, ref: 'JobProgress', required: true},
   workerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  status: { type: String, enum: ['paid', 'unpaid'], default: 'unpaid' },
+  status: { type: String, enum: ['paid','paiding', 'unpaid'], default: 'unpaid' },
   totalAmount: { type: Number, default: 0 },
   breakdown: {
     baseSalary: { type: Number, default: 0 },

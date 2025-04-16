@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import '../../constant/styles.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class EmployeeContractScreen extends StatefulWidget {
   const EmployeeContractScreen({super.key});
@@ -11,11 +14,34 @@ class EmployeeContractScreen extends StatefulWidget {
 class _EmployeeContractScreenState extends State<EmployeeContractScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool isSigned = false;
+  String contractHtml = "";
+  String summaryHtml = "";
+  bool isLoading = true;
 
   @override
   void initState() {
     _tabController = TabController(length: 2, vsync: this);
+    fetchContractData();
     super.initState();
+  }
+
+  Future<void> fetchContractData() async {
+    final response = await http.get(
+      Uri.parse('https://yourapi.com/api/contract/detail'),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        contractHtml = data['contractHtml'] ?? "";
+        summaryHtml = data['summaryHtml'] ?? "";
+        isSigned = data['isSigned'] ?? false;
+        isLoading = false;
+      });
+    } else {
+      // handle error
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -42,77 +68,107 @@ class _EmployeeContractScreenState extends State<EmployeeContractScreen>
         backgroundColor: AppColors.background,
         elevation: 0,
       ),
-      body: Column(
-        children: [
-          TabBar(
-            controller: _tabController,
-            indicatorColor: AppColors.primary,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: Colors.grey,
-            tabs: const [Tab(text: 'Гэрээ'), Tab(text: 'Гэрээний хураангуй')],
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _contractText(),
-                _contractText(), // You can replace with summary content
-              ],
-            ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Accept contract API
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radius),
+      body:
+          isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                children: [
+                  TabBar(
+                    controller: _tabController,
+                    indicatorColor: AppColors.primary,
+                    labelColor: AppColors.primary,
+                    unselectedLabelColor: Colors.grey,
+                    tabs: const [
+                      Tab(text: 'Гэрээ'),
+                      Tab(text: 'Гэрээний хураангуй'),
+                    ],
                   ),
-                ),
-                child: const Text("Батлах"),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () {
-                  // TODO: Cancel logic
-                },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: AppColors.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSpacing.radius),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _contractHtmlView(contractHtml),
+                        _contractHtmlView(summaryHtml),
+                      ],
+                    ),
                   ),
-                ),
-                child: const Text(
-                  "Татгалзах",
-                  style: TextStyle(color: AppColors.primary),
-                ),
+                ],
               ),
-            ),
-          ],
-        ),
-      ),
+      bottomNavigationBar:
+          !isSigned && contractHtml.isNotEmpty
+              ? Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // TODO: Accept contract API
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.radius,
+                            ),
+                          ),
+                        ),
+                        child: const Text(
+                          "Батлах",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          // TODO: Cancel logic
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: const BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.radius,
+                            ),
+                          ),
+                        ),
+                        child: const Text(
+                          "Татгалзах",
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+              : null,
     );
   }
 
-  Widget _contractText() {
+  Widget _contractHtmlView(String htmlData) {
+    if (htmlData.isEmpty) {
+      return const Center(
+        child: Text("Гэрээ үүсээгүй байна.", style: AppTextStyles.subtitle),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.all(16),
       child: SingleChildScrollView(
-        child: Text(
-          '''Ullamco pariatur amet adipisicing proident qui magna exercitation ad laboris ad proident. Cillum id exercitation nisi commodo aliqua aute deserunt deserunt elit sit pariatur excepteur. Aliqua ullamco eiusmod id ipsum id adipisicing nostrud fugiat reprehenderit reprehenderit amet officia ea proident ut. Aliqua sint mollit amet incididunt et quis officia do amet sit sint anim consequat nostrud amet sit. Consequat incididunt excepteur sunt ut esse id ut aute officia proident anim. Excepteur dolor aliquip esse quis labore ea ad nulla nulla non officia aliqua eu ex. Eiusmod cupidatat sunt exercitation Lorem occaecat Lorem veniam non sunt amet proident nisi reprehenderit.''',
-          style: AppTextStyles.body,
+        child: Html(
+          data: htmlData,
+          style: {
+            "body": Style(
+              fontSize: FontSize.medium,
+              color: AppColors.text,
+              fontFamily: 'Roboto',
+            ),
+          },
         ),
       ),
     );

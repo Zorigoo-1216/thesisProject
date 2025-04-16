@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
+import '../../widgets/category_item.dart';
+import '../../widgets/job_card.dart';
+import '../../data/testdata/dummy_jobs.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -36,11 +39,11 @@ class HomeScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
-              _CategoryItem(icon: Icons.apartment, label: 'Барилга'),
-              _CategoryItem(icon: Icons.restaurant, label: 'Зоогийн газар'),
-              _CategoryItem(icon: Icons.factory, label: 'Үйлдвэр'),
-              _CategoryItem(icon: Icons.local_shipping, label: 'Худалдаа'),
-              _CategoryItem(icon: Icons.directions_car, label: 'Засвар'),
+              CategoryItem(icon: Icons.apartment, label: 'Барилга'),
+              CategoryItem(icon: Icons.restaurant, label: 'Зоогийн газар'),
+              CategoryItem(icon: Icons.factory, label: 'Үйлдвэр'),
+              CategoryItem(icon: Icons.local_shipping, label: 'Худалдаа'),
+              CategoryItem(icon: Icons.directions_car, label: 'Засвар'),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -70,7 +73,6 @@ class HomeScreen extends StatelessWidget {
                           Text("12"),
                         ],
                       ),
-                      SizedBox(width: AppSpacing.xs),
                     ],
                   ),
             ),
@@ -78,145 +80,8 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           const Text('Ажлын зарууд', style: AppTextStyles.heading),
           const SizedBox(height: AppSpacing.sm),
-
-          /// ✅ Job Card
-          const _JobCard(),
+          ...dummyJobs.map((job) => JobCard(job: job)).toList(),
         ],
-      ),
-    );
-  }
-}
-
-class _CategoryItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const _CategoryItem({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: AppSpacing.xs),
-        CircleAvatar(
-          backgroundColor: AppColors.stateBackground,
-          child: Icon(icon, color: AppColors.primary),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(label, style: AppTextStyles.subtitle.copyWith(fontSize: 12)),
-      ],
-    );
-  }
-}
-
-class _JobCard extends StatefulWidget {
-  const _JobCard({super.key});
-
-  @override
-  State<_JobCard> createState() => _JobCardState();
-}
-
-class _JobCardState extends State<_JobCard> {
-  bool applied = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: AppSpacing.cardElevation,
-      color: AppColors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            /// Avatar + Info
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const CircleAvatar(
-                  radius: 24,
-                  backgroundImage: AssetImage('assets/images/avatar.png'),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text("О.Даваанжаргал", style: AppTextStyles.body),
-                      Text(
-                        "Барилгын туслах ажилтан авна",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text("3 цагийн өмнө", style: AppTextStyles.subtitle),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-
-            /// Location
-            const Row(
-              children: [
-                Icon(Icons.location_on, size: 18, color: AppColors.primary),
-                SizedBox(width: 6),
-                Text("БЗД, Сансар, Жуков, Гүркий хотхон"),
-              ],
-            ),
-            const SizedBox(height: 4),
-
-            /// Salary
-            const Row(
-              children: [
-                Icon(Icons.attach_money, size: 18, color: AppColors.primary),
-                SizedBox(width: 6),
-                Text("120000₮ / өдөр"),
-              ],
-            ),
-            const SizedBox(height: 4),
-
-            /// Capacity
-            const Row(
-              children: [
-                Icon(Icons.group, size: 18, color: AppColors.primary),
-                SizedBox(width: 6),
-                Text("Ажиллах хүн: 3"),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-
-            /// Footer
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("7/4", style: AppTextStyles.subtitle),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      applied = !applied;
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        applied ? Colors.grey.shade300 : AppColors.primary,
-                    foregroundColor: applied ? AppColors.text : AppColors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radius),
-                    ),
-                  ),
-                  child: Text(applied ? "Applied" : "Apply Now"),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

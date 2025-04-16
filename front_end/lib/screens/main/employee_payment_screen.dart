@@ -77,9 +77,15 @@ class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () {
-                      showConfirmDialog();
-                    },
+                    onPressed: showConfirmDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                     child: const Text("Цалин өгсөн"),
                   ),
                 ),
@@ -87,6 +93,15 @@ class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => setState(() => isPaid = false),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      side: BorderSide.none,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                     child: const Text("Цалин өгөөгүй"),
                   ),
                 ),

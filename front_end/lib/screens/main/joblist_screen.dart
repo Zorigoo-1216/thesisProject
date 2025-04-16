@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
-import './job_card.dart';
+import '../../data/testdata/dummy_jobs.dart';
+import '../../widgets/job_card.dart';
 import './job_filter_sheet_screen.dart';
 
 class JobListScreen extends StatelessWidget {
@@ -14,10 +15,6 @@ class JobListScreen extends StatelessWidget {
         backgroundColor: AppColors.white,
         elevation: 0,
         toolbarHeight: 80,
-        // title: const Text(
-        //   'Сайн уу Зоригоо',
-        //   style: TextStyle(color: AppColors.text, fontSize: 20),
-        // ),
         actions: const [
           Icon(Icons.notifications_none, color: AppColors.primary),
           SizedBox(width: AppSpacing.sm),
@@ -32,7 +29,7 @@ class JobListScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          // 🔍 Search + Filter
+          // 🔍 Search + Filter Row
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
@@ -83,19 +80,14 @@ class JobListScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.md),
 
-          // 📋 Job Cards
+          // 📋 Job List
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              itemCount: 5,
+              itemCount: dummyJobs.length,
               itemBuilder: (context, index) {
-                return const JobCard(
-                  employerName: 'О.Эрдэнэцогт',
-                  jobTitle: 'Барилгын туслах ажилтан авна',
-                  location: 'БЗД, Жуков, Сэнгүр хотхон',
-                  salary: '120000₮/өдөр',
-                  date: '7/4',
-                );
+                final job = dummyJobs[index];
+                return JobCard(job: job);
               },
             ),
           ),

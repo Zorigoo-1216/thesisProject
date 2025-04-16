@@ -105,10 +105,29 @@ class _EmployeeWorkProgressScreenState
   }
 
   Widget _actionButton(String label, VoidCallback onTap) {
-    return ElevatedButton(onPressed: onTap, child: Text(label));
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white, // text color
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(label),
+    );
   }
 
   Widget _outlinedButton(String label, VoidCallback onTap) {
-    return OutlinedButton(onPressed: onTap, child: Text(label));
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        side: BorderSide.none,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      child: Text(label),
+    );
   }
 }
