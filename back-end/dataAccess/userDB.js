@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const viewUserDTO = require('../viewModels/viewUserDTO');
+const Rating = require('../models/Rating');
 //-----------------------login хэсгийн логик------------------------
 // Email хаяг бүртгэлтэй байгаа эсэхийг шалгах
 const checkUserbyEmail = async (email) => {
@@ -117,7 +118,9 @@ const updateAverageRating = async (userId) => {
 // const getUserById = async (userId) => {
 //   return await User.findById(userId);
 // }
-
+const getUsersByIds = async (userIds) => {
+  return await User.find({ _id: { $in: userIds } });
+}
 module.exports = {
   checkUserbyEmail,
   checkUserbyPhoneNumber,
@@ -137,5 +140,6 @@ module.exports = {
   getUserByEmailFull,
   getUserByPhoneFull,
   findUsersByQuery,
-  updateAverageRating
+  updateAverageRating,
+  getUsersByIds
 };

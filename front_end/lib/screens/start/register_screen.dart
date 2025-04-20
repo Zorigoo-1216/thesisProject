@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+//import 'package:shared_preferences/shared_preferences.dart';
+import '../../constant/api.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -39,9 +43,64 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
-  void _submit() {
+  String? getGenderValue(String? genderText) {
+    switch (genderText) {
+      case 'Эрэгтэй':
+        return 'male';
+      case 'Эмэгтэй':
+        return 'female';
+      case 'Бусад':
+        return 'other';
+      default:
+        return null;
+    }
+  }
+
+  Future<void> _submit() async {
     if (_formKey.currentState!.validate() && agree) {
-      Navigator.pushNamed(context, '/login');
+      final isIndividual = _tabController.index == 0;
+      final body =
+          isIndividual
+              ? {
+                'role': 'individual',
+                'lastName': controllers['lastName']!.text.trim(),
+                'firstName': controllers['firstName']!.text.trim(),
+                'phone': controllers['phone']!.text.trim(),
+                'password': controllers['password']!.text.trim(),
+                'gender': getGenderValue(gender),
+              }
+              : {
+                'role': 'company',
+                'companyName': controllers['companyName']!.text.trim(),
+                'representative': controllers['firstName']!.text.trim(),
+                'email': controllers['email']!.text.trim(),
+                'password': controllers['password']!.text.trim(),
+              };
+
+      try {
+        final response = await http.post(
+          Uri.parse('${baseUrl}auth/register'),
+
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(body),
+        );
+
+        if (response.statusCode == 201) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Бүртгэл амжилттай')));
+          Navigator.pushReplacementNamed(context, '/login');
+        } else {
+          final error = jsonDecode(response.body)['message'];
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error ?? 'Бүртгэл хийхэд алдаа гарлаа')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Сервертэй холбогдож чадсангүй')),
+        );
+      }
     }
   }
 

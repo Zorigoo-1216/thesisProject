@@ -8,14 +8,26 @@ class JobHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Хийсэн ажлууд"),
+        backgroundColor: AppColors.white,
+        elevation: 0,
+        title: const Text(
+          "Хийсэн ажлууд",
+          style: TextStyle(color: AppColors.text),
+        ),
+        leading: const BackButton(color: AppColors.text),
         actions: const [
-          Icon(Icons.notifications_none),
+          Icon(Icons.notifications_none, color: AppColors.primary),
           SizedBox(width: 12),
-          Icon(Icons.settings),
+          Icon(Icons.settings, color: AppColors.primary),
+          SizedBox(width: 12),
+          CircleAvatar(
+            radius: 18,
+            backgroundImage: AssetImage('assets/images/avatar.png'),
+          ),
           SizedBox(width: 12),
         ],
       ),
+      backgroundColor: AppColors.background,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
@@ -25,7 +37,7 @@ class JobHistoryScreen extends StatelessWidget {
               backgroundImage: AssetImage('assets/images/avatar.png'),
             ),
             const SizedBox(height: AppSpacing.sm),
-            const Text("Full name", style: AppTextStyles.heading),
+            const Text("О.Эрдэнэцогт", style: AppTextStyles.heading),
             const SizedBox(height: AppSpacing.xs),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -36,31 +48,24 @@ class JobHistoryScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.md),
-            const Text("mike.williams@gmail.com"),
-            const Text("Call: (+1) 202-555-0151"),
+            const Text("erdenetsogt@email.com"),
+            const Text("Утас: 8888-8888"),
             const SizedBox(height: AppSpacing.lg),
 
             // ✅ Job History Cards
             _jobCard(
-              "Барилгын туслах",
-              "2025:12:16",
-              "2025 : 12 : 20",
-              "Ажил олгогчийн нэр",
-              "85000₮",
+              title: "Барилгын туслах",
+              startDate: "2025.12.16",
+              endDate: "2025.12.20",
+              employerName: "Г.Цолмон",
+              salary: "120000₮ / өдөр",
             ),
             _jobCard(
-              "Барилгын туслах",
-              "2025:12:16",
-              "2025 : 12 : 20",
-              "Ажил олгогчийн нэр",
-              "85000₮",
-            ),
-            _jobCard(
-              "Барилгын туслах",
-              "2025:12:16",
-              "2025 : 12 : 20",
-              "Ажил олгогчийн нэр",
-              "85000₮",
+              title: "Зөөврийн ажилтан",
+              startDate: "2025.10.05",
+              endDate: "2025.10.08",
+              employerName: "С.Батмөнх",
+              salary: "100000₮ / өдөр",
             ),
           ],
         ),
@@ -68,9 +73,9 @@ class JobHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _infoBox(String label, String value, IconData icon) {
+  static Widget _infoBox(String label, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.stateBackground,
         borderRadius: BorderRadius.circular(12),
@@ -91,13 +96,13 @@ class JobHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _jobCard(
-    String title,
-    String startDate,
-    String endDate,
-    String employerName,
-    String salary,
-  ) {
+  static Widget _jobCard({
+    required String title,
+    required String startDate,
+    required String endDate,
+    required String employerName,
+    required String salary,
+  }) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       shape: RoundedRectangleBorder(
@@ -111,25 +116,43 @@ class JobHistoryScreen extends StatelessWidget {
           children: [
             Text(title, style: AppTextStyles.heading.copyWith(fontSize: 16)),
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              "$startDate - $endDate",
-              style: const TextStyle(
-                color: Colors.green,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: [
+                const Icon(
+                  Icons.calendar_month,
+                  size: 16,
+                  color: AppColors.iconColor,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  "$startDate - $endDate",
+                  style: const TextStyle(color: Colors.green),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.xs),
-            Text(employerName, style: AppTextStyles.subtitle),
-            const SizedBox(height: AppSpacing.sm),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                salary,
-                style: AppTextStyles.body.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
+            Row(
+              children: [
+                const Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: AppColors.iconColor,
                 ),
-              ),
+                const SizedBox(width: 6),
+                Text(employerName),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
+              children: [
+                const Icon(
+                  Icons.payments_outlined,
+                  size: 16,
+                  color: AppColors.iconColor,
+                ),
+                const SizedBox(width: 6),
+                Text(salary),
+              ],
             ),
           ],
         ),

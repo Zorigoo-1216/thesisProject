@@ -1,4 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:front_end/constant/api.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constant/styles.dart';
 
 class CreateJobTab extends StatefulWidget {
@@ -20,6 +24,12 @@ class _CreateJobTabState extends State<CreateJobTab> {
   final List<String> requirements = [''];
   final List<String> additions = [''];
 
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController descriptionController = TextEditingController();
+  final TextEditingController salaryAmountController = TextEditingController();
+  final TextEditingController addressController = TextEditingController();
+  final TextEditingController capacityController = TextEditingController();
+
   final TextEditingController startDateController = TextEditingController();
   final TextEditingController endDateController = TextEditingController();
   final TextEditingController startTimeController = TextEditingController();
@@ -27,8 +37,19 @@ class _CreateJobTabState extends State<CreateJobTab> {
   final TextEditingController breakStartController = TextEditingController();
   final TextEditingController breakEndController = TextEditingController();
 
+  String? selectedDistrict;
+  String? selectedKhoroo;
+  String? selectedSalaryType;
+  String? selectedBranch;
+  String? selectedJobType;
+
   @override
   void dispose() {
+    titleController.dispose();
+    descriptionController.dispose();
+    salaryAmountController.dispose();
+    addressController.dispose();
+    capacityController.dispose();
     startDateController.dispose();
     endDateController.dispose();
     startTimeController.dispose();
@@ -71,6 +92,99 @@ class _CreateJobTabState extends State<CreateJobTab> {
     }
   }
 
+  Future<void> _submitJob() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? token = prefs.getString('token');
+    var id = prefs.getString('id');
+    if (token == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Токен олдсонгүй")));
+      return;
+    }
+
+    const jobTypeMap = {
+      'Цагийн': 'hourly',
+      'Бүтэн цагийн': 'full-time',
+      'Өдөрийн': 'part-time',
+    };
+
+    const salaryTypeMap = {
+      'Цаг': 'hourly',
+      'Өдөр': 'daily',
+      'Гүйцэтгэл': 'performance',
+    };
+
+    final jobData = {
+      "employerId": id, // Replace with actual user ID
+      "title": titleController.text,
+      "description": descriptionController.text,
+      "requirements": requirements.where((e) => e.trim().isNotEmpty).toList(),
+      "location":
+          "${selectedDistrict ?? ''} ${selectedKhoroo ?? ''}, ${addressController.text}",
+
+      "salary": {
+        "amount": int.tryParse(salaryAmountController.text) ?? 0,
+        "currency": "MNT",
+        "type": salaryTypeMap[selectedSalaryType] ?? 'hourly',
+      },
+
+      "benefits": {
+        "transportIncluded": includeTransport,
+        "mealIncluded": includeMeal,
+        "bonusIncluded": includeBonus,
+        "includeDefaultBenefits": false,
+      },
+
+      "seeker": isIndividual ? "individual" : "company",
+      "capacity": int.tryParse(capacityController.text) ?? 1,
+      "branch": selectedBranch ?? '',
+      "jobType": jobTypeMap[selectedJobType] ?? 'hourly',
+      "level": "none",
+      "possibleForDisabled": supportDisability,
+
+      "status": "open",
+      "startDate": startDateController.text,
+      "endDate": endDateController.text,
+
+      "workStartTime": startTimeController.text,
+      "workEndTime": endTimeController.text,
+      "breakStartTime": breakStartController.text,
+      "breakEndTime": breakEndController.text,
+
+      "hasInterview": hasInterview,
+      "applications": [],
+      "employees": [],
+    };
+
+    try {
+      final response = await http.post(
+        Uri.parse('${baseUrl}jobs/create'),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode(jobData),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Амжилттай хадгалагдлаа")));
+      } else {
+        print("Failed: ${response.body}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Алдаа гарлаа: ${response.statusCode}")),
+        );
+      }
+    } catch (e) {
+      print("Exception: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Сүлжээний алдаа: $e")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -83,18 +197,45 @@ class _CreateJobTabState extends State<CreateJobTab> {
             value: isIndividual,
             onChanged: (val) => setState(() => isIndividual = val!),
           ),
-          _input('Ажлын нэр'),
-          _input('Ажлын тайлбар', maxLines: 3),
+          _input('Ажлын нэр', controller: titleController),
+          _input(
+            'Ажлын тайлбар',
+            controller: descriptionController,
+            maxLines: 3,
+          ),
           Row(
             children: [
-              Expanded(child: _dropdown('Дүүрэг', ['БЗД', 'СБД', 'ХУД'])),
+              Expanded(
+                child: _dropdown(
+                  'Дүүрэг',
+                  ['БЗД', 'СБД', 'ХУД'],
+                  selectedDistrict,
+                  (val) => setState(() => selectedDistrict = val),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _dropdown('Хороо', ['1-р хороо', '2-р хороо'])),
+              Expanded(
+                child: _dropdown(
+                  'Хороо',
+                  ['1-р хороо', '2-р хороо'],
+                  selectedKhoroo,
+                  (val) => setState(() => selectedKhoroo = val),
+                ),
+              ),
             ],
           ),
-          _input('Хаяг'),
-          _dropdown('Цалингийн төрөл', ['Өдөр', 'Цаг', 'Гүйцэтгэл']),
-          _input('Цалингийн хэмжээ', prefix: '₮'),
+          _input('Хаяг', controller: addressController),
+          _dropdown(
+            'Цалингийн төрөл',
+            ['Өдөр', 'Цаг', 'Гүйцэтгэл'],
+            selectedSalaryType,
+            (val) => setState(() => selectedSalaryType = val),
+          ),
+          _input(
+            'Цалингийн хэмжээ',
+            controller: salaryAmountController,
+            prefix: '₮',
+          ),
           _stateCheckbox(
             'Унаа',
             includeTransport,
@@ -110,9 +251,20 @@ class _CreateJobTabState extends State<CreateJobTab> {
             includeBonus,
             (val) => setState(() => includeBonus = val),
           ),
-          _dropdown('Ажлын салбар', ['Барилга', 'Үйлчилгээ']),
-          _dropdown('Ажлын төрөл', ['Өдөр', 'Цаг']),
-          if (isIndividual) _input('Ажилчдын тоо'),
+          _dropdown(
+            'Ажлын салбар',
+            ['Барилга', 'Үйлчилгээ'],
+            selectedBranch,
+            (val) => setState(() => selectedBranch = val),
+          ),
+          _dropdown(
+            'Ажлын төрөл',
+            ['Өдөр', 'Цаг'],
+            selectedJobType,
+            (val) => setState(() => selectedJobType = val),
+          ),
+          if (isIndividual)
+            _input('Ажилчдын тоо', controller: capacityController),
           _stateCheckbox(
             'Ярилцлагын шаттай',
             hasInterview,
@@ -138,22 +290,28 @@ class _CreateJobTabState extends State<CreateJobTab> {
 
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () {},
+            onPressed: _submitJob,
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
               backgroundColor: AppColors.primary,
             ),
-            child: const Text("Үргэлжлүүлэх", style: AppTextStyles.whiteButton),
+            child: const Text("Хадгалах", style: AppTextStyles.whiteButton),
           ),
         ],
       ),
     );
   }
 
-  Widget _input(String label, {String? prefix, int maxLines = 1}) {
+  Widget _input(
+    String label, {
+    TextEditingController? controller,
+    String? prefix,
+    int maxLines = 1,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: TextField(
+        controller: controller,
         maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
@@ -169,10 +327,16 @@ class _CreateJobTabState extends State<CreateJobTab> {
     );
   }
 
-  Widget _dropdown(String label, List<String> items) {
+  Widget _dropdown(
+    String label,
+    List<String> items,
+    String? selectedValue,
+    ValueChanged<String?> onChanged,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: DropdownButtonFormField<String>(
+        value: selectedValue,
         decoration: InputDecoration(
           labelText: label,
           filled: true,
@@ -186,7 +350,7 @@ class _CreateJobTabState extends State<CreateJobTab> {
             items
                 .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                 .toList(),
-        onChanged: (_) {},
+        onChanged: onChanged,
       ),
     );
   }
@@ -222,6 +386,7 @@ class _CreateJobTabState extends State<CreateJobTab> {
           return Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xs),
             child: TextField(
+              onChanged: (val) => values[entry.key] = val,
               decoration: InputDecoration(
                 hintText: '$label оруулна уу',
                 filled: true,

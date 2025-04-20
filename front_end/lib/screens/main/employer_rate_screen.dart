@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class EmployerRateScreen extends StatefulWidget {
   const EmployerRateScreen({super.key});
@@ -21,7 +22,6 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
   void submitRating() {
     final comment = commentController.text.trim();
     debugPrint("Rating: $selectedRating, Comment: $comment");
-    // TODO: API call or logic
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text("Үнэлгээ илгээгдлээ")));
@@ -30,84 +30,93 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: const BackButton(),
-        actions: const [
-          Icon(Icons.notifications_none),
-          SizedBox(width: 12),
-          Icon(Icons.settings),
-          SizedBox(width: 12),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          children: [
-            const CircleAvatar(
-              radius: 36,
-              backgroundImage: AssetImage('assets/images/avatar.png'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text("О.Эрдэнэцогт", style: AppTextStyles.heading),
-            const Text("Барилгын инженер", style: AppTextStyles.subtitle),
-            const SizedBox(height: AppSpacing.md),
-
-            // Rating Stats
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _statBox("4.5", "RATING", Icons.star, Colors.amber),
-                const SizedBox(width: 12),
-                _statBox("12", "НИЙТ АЖИЛ", Icons.work, Colors.green),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-
-            // ⭐ Rating Stars
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (index) {
-                return IconButton(
-                  icon: Icon(
-                    index < selectedRating ? Icons.star : Icons.star_border,
-                    color: AppColors.primary,
-                    size: 32,
+      body: CustomScrollView(
+        slivers: [
+          const CustomSliverAppBar(showTabs: false, showBack: true),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const CircleAvatar(
+                    radius: 36,
+                    backgroundImage: AssetImage('assets/images/avatar.png'),
                   ),
-                  onPressed: () {
-                    setState(() => selectedRating = index + 1);
-                  },
-                );
-              }),
-            ),
-            const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text("О.Эрдэнэцогт", style: AppTextStyles.heading),
+                  const Text("Барилгын инженер", style: AppTextStyles.subtitle),
+                  const SizedBox(height: AppSpacing.md),
 
-            // ✍️ Comment
-            TextField(
-              controller: commentController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: "What do you want to say?",
-                prefixIcon: const Icon(Icons.person_outline),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide.none,
-                ),
+                  // ⭐ Rating Stats
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _statBox("4.5", "RATING", Icons.star, Colors.amber),
+                      const SizedBox(width: 12),
+                      _statBox("12", "НИЙТ АЖИЛ", Icons.work, Colors.green),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // 🌟 Stars
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(5, (index) {
+                      return IconButton(
+                        icon: Icon(
+                          index < selectedRating
+                              ? Icons.star
+                              : Icons.star_border,
+                          color: AppColors.primary,
+                          size: 32,
+                        ),
+                        onPressed: () {
+                          setState(() => selectedRating = index + 1);
+                        },
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // 💬 Comment box
+                  TextField(
+                    controller: commentController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: "Тайлбар бичих...",
+                      prefixIcon: const Icon(Icons.comment_outlined),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // ✅ Submit Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: selectedRating > 0 ? submitRating : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text("Үнэлгээ илгээх"),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: AppSpacing.md),
-
-            // ✅ Submit Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: selectedRating > 0 ? submitRating : null,
-                child: const Text("Send Rating"),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -3,13 +3,16 @@ const Application = require('../models/Application');
 const User = require('../models/User');
 const viewJobDTO = require("../viewModels/viewJobDTO");
 const viewUserDTO = require("../viewModels/viewUserDTO");
+const mongoose = require('mongoose');
 //------------------------Create jobs------------------------
 
 // Ажлын зар үүсгэх
-const createJob = async (jobData, employerId) => {
-    const newJob = new Job({ ...jobData, employerId });
-    return await newJob.save();
-}
+const createJob = async (jobData) => {
+  const job = new Job(jobData);
+  return await job.save();
+};
+
+
 // hereglegchiin uusgesen zariin jagsaaltiig haruulah
 const getUserPostedJobHistory = async (userId) => {
     const jobs = await Job.find({employerId: userId});
@@ -28,10 +31,8 @@ const getdJoblist = async () => {
     const jobs = await Job.find({
         endDate: { $gt: new Date()},
         status: 'open' });
-    const defaultJob = jobs.map((job) => {
-        return new viewJobDTO(job);
-    });
-    return defaultJob;
+   
+    return jobs;
 }
 
 // ajliin zar filter eer haih
@@ -66,21 +67,22 @@ const updateJobApplications = async (jobId, applicationId) => {
 }
 
 const getJobLisForUser = async (user, filters) => {
-    const query = {
-        status: 'open',
-        endDate: { $gte: new Date() },
-        'requirements': { $in: user.profile.skills },
-        'salary.amount': { $lte: user.profile.waitingSalaryPerHour },
-        ...(filters.branchType && { branchType: filters.branchType }),
-        ...(filters.location && { location: filters.location }),
-        ...(filters.possibleForDisabled !== undefined && {
-          possibleForDisabled: filters.possibleForDisabled
-        }),
-        ...(user.profile.mainBranch && { branchType: user.profile.mainBranch })
-      };
-    
-      return await Job.find(query);
-  };
+  const query = {
+      status: 'open',
+      endDate: { $gte: new Date() },
+      'requirements': { $in: user.profile.skills },
+      'salary.amount': { $lte: user.profile.waitingSalaryPerHour },
+      ...(filters.branchType && { branchType: filters.branchType }),
+      ...(filters.location && { location: filters.location }),
+      ...(filters.possibleForDisabled !== undefined && {
+        possibleForDisabled: filters.possibleForDisabled
+      }),
+      ...(user.profile.mainBranch && { branchType: user.profile.mainBranch })
+    };
+  
+    return await Job.find(query);
+};
+
 
   const updateJob = async (jobId, updates) => {
     return await Job.findByIdAndUpdate(jobId, { $set: updates }, { new: true });
@@ -90,8 +92,9 @@ const getJobLisForUser = async (user, filters) => {
     return await Job.findByIdAndUpdate(jobId, { status: 'deleted' });
   }
   const getMyPostedJobs = async (userId) => {
+    //const userObjectId = new mongoose.Types.ObjectId(userId);
     const jobs = await Job.find({ employerId: userId, status: { $ne: 'closed' } });
-    return jobs.map(job => new viewJobDTO(job));
+    return jobs;
   }
   const getEmployeesByJob = async (jobId) => {
     const job = await Job.findById(jobId);

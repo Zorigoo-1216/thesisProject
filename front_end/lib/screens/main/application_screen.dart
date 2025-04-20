@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
 import '../../widgets/job_application_card.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class ApplicationScreen extends StatefulWidget {
   const ApplicationScreen({super.key});
@@ -57,44 +58,27 @@ class _ApplicationScreenState extends State<ApplicationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        toolbarHeight: 80,
-        // title: const Text(
-        //   'Сайн уу Зоригоо',
-        //   style: TextStyle(color: AppColors.text, fontSize: 20),
-        // ),
-        actions: const [
-          Icon(Icons.notifications_none, color: AppColors.primary),
-          SizedBox(width: AppSpacing.sm),
-          Icon(Icons.settings, color: AppColors.primary),
-          SizedBox(width: AppSpacing.sm),
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: AssetImage('assets/images/profile.png'),
-          ),
-          SizedBox(width: AppSpacing.sm),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.subtitle,
-          indicatorColor: AppColors.primary,
-          tabs: const [
-            Tab(text: "Waiting"),
-            Tab(text: "Accepted"),
-            Tab(text: "Rejected"),
+      body: DefaultTabController(
+        length: 3,
+        child: CustomScrollView(
+          slivers: [
+            CustomSliverAppBar(
+              showTabs: true,
+              showBack: true,
+              tabController: _tabController,
+            ),
+            SliverFillRemaining(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTabContent("Waiting"),
+                  _buildTabContent("Accepted"),
+                  _buildTabContent("Rejected"),
+                ],
+              ),
+            ),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildTabContent("Waiting"),
-          _buildTabContent("Accepted"),
-          _buildTabContent("Rejected"),
-        ],
       ),
     );
   }

@@ -5,17 +5,21 @@ const applicationController = require('../controllers/applicationController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // -------------------------------ajil haih -----------------------
-router.get('/', jobController.getJobList);  
-router.get("/search", jobController.searchJobs);  
+router.get('/', authMiddleware, jobController.getJobList);  
+router.get("/search", authMiddleware, jobController.searchJobs);  
+router.get('/searchByTitle', jobController.searchJobs); 
 router.get('/suitable', authMiddleware, jobController.getSuitableJobsForUser);
+router.get('/postedJobHistory' , authMiddleware, jobController.getUserPostedJobHistory); 
+router.get('/postedJobs', authMiddleware, jobController.getMyPostedJobs);
 // ---------------------------- manage job --------------------------
+
+
 router.get('/:id', jobController.getJobById); 
 router.post('/create', authMiddleware, jobController.createJob); 
 router.put('/:id/edit', authMiddleware, jobController.editJob);
 router.delete('/:id', authMiddleware, jobController.deleteJob); 
 // ---------------------------- manage job application --------------------------
-router.get('/postedJobHistory' , authMiddleware, jobController.getUserPostedJobHistory); 
-router.get('/postedJobs', authMiddleware, jobController.getMyPostedJobs);
+router.get('/:id/suitable-workers', authMiddleware, jobController.getSuitableWorkersByJob);
 router.get('/:id/applications', authMiddleware, applicationController.getAppliedUsersByJob);
 router.get('/:id/interviews', authMiddleware, applicationController.getInterviewsByJob);
 router.get('/:id/candidates', authMiddleware, applicationController.getCandidatesByJob);

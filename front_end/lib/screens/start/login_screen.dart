@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
 
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../constant/api.dart';
+import '../../models/user_model.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,9 +19,44 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailOrPhoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  void _submitLogin() {
+  Future<void> _submitLogin() async {
     if (_formKey.currentState!.validate()) {
-      Navigator.pushNamed(context, '/home');
+      final input = _emailOrPhoneController.text.trim();
+      final password = _passwordController.text.trim();
+
+      try {
+        final response = await http.post(
+          Uri.parse('${baseUrl}auth/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'emailOrPhone': input, // ✅ зөв
+            'password': password,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final token = data['token'];
+          final id = data['user']['id'];
+          final prefs = await SharedPreferences.getInstance();
+          final user = UserModel.fromJson(data['user']);
+          await prefs.setString('name', user.name);
+          await prefs.setString('token', token);
+          await prefs.setString('userId', id);
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          final data = jsonDecode(response.body);
+          final error =
+              data['message'] ?? data['error'] ?? 'Нэвтрэхэд алдаа гарлаа';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error ?? 'Нэвтрэхэд алдаа гарлаа')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Сервертэй холбогдож чадсангүй')),
+        );
+      }
     }
   }
 
@@ -36,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: 88,
                     height: 89,
-                    child: Image.asset('assets/images/group-12.png'),
+                    child: Image.asset('assets/images/logo.png'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   const Text(

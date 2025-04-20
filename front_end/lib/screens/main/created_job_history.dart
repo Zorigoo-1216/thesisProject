@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class CreatedJobHistoryScreen extends StatelessWidget {
   const CreatedJobHistoryScreen({super.key});
@@ -7,64 +8,60 @@ class CreatedJobHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Үүсгэсэн ажлын түүх"),
-        actions: const [
-          Icon(Icons.notifications_none),
-          SizedBox(width: 12),
-          Icon(Icons.settings),
-          SizedBox(width: 12),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          children: [
-            // User Profile
-            const CircleAvatar(
-              radius: 40,
-              backgroundImage: AssetImage('assets/images/avatar.png'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text("Full name", style: AppTextStyles.heading),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _infoBox("RATING", "4.5", Icons.star),
-                const SizedBox(width: 12),
-                _infoBox("PROJECTS", "50", Icons.work_outline),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Text("mike.williams@gmail.com"),
-            const Text("Call: (+1) 202-555-0151"),
-            const SizedBox(height: AppSpacing.lg),
+      body: CustomScrollView(
+        slivers: [
+          const CustomSliverAppBar(showTabs: false, showBack: true),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                children: [
+                  const CircleAvatar(
+                    radius: 40,
+                    backgroundImage: AssetImage('assets/images/avatar.png'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text("Full name", style: AppTextStyles.heading),
+                  const SizedBox(height: AppSpacing.xs),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _infoBox("RATING", "4.5", Icons.star),
+                      const SizedBox(width: 12),
+                      _infoBox("PROJECTS", "50", Icons.work_outline),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text("mike.williams@gmail.com"),
+                  const Text("Call: (+1) 202-555-0151"),
+                  const SizedBox(height: AppSpacing.lg),
 
-            // ✅ Created Job History Cards
-            _jobCard(
-              title: "Барилгын туслах",
-              salary: "85000₮",
-              dateRange: "2025:12:16 - 2025 : 12 : 20",
-              location: "БЗД, Жуков, Сэнгүр горхи хотхон",
-              pay: "120000₮/өдөр",
-              applicants: "7/4",
+                  _jobCard(
+                    title: "Барилгын туслах",
+                    salary: "85000₮",
+                    dateRange: "2025:12:16 - 2025:12:20",
+                    location: "БЗД, Жуков, Сэнгүр горхи хотхон",
+                    pay: "120000₮/өдөр",
+                    applicants: "7/4",
+                  ),
+                  _jobCard(
+                    title: "Барилгын туслах",
+                    salary: "85000₮",
+                    dateRange: "2025:12:16 - 2025:12:20",
+                    location: "БЗД, Жуков, Сэнгүр горхи хотхон",
+                    pay: "120000₮/өдөр",
+                    applicants: "7/4",
+                  ),
+                ],
+              ),
             ),
-            _jobCard(
-              title: "Барилгын туслах",
-              salary: "85000₮",
-              dateRange: "2025:12:16 - 2025 : 12 : 20",
-              location: "БЗД, Жуков, Сэнгүр горхи хотхон",
-              pay: "120000₮/өдөр",
-              applicants: "7/4",
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _infoBox(String label, String value, IconData icon) {
+  static Widget _infoBox(String label, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -87,7 +84,7 @@ class CreatedJobHistoryScreen extends StatelessWidget {
     );
   }
 
-  Widget _jobCard({
+  static Widget _jobCard({
     required String title,
     required String salary,
     required String dateRange,
@@ -128,8 +125,6 @@ class CreatedJobHistoryScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-
-            // Location
             Row(
               children: [
                 const Icon(
@@ -142,8 +137,6 @@ class CreatedJobHistoryScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
-
-            // Pay
             Row(
               children: [
                 const Icon(
@@ -156,8 +149,6 @@ class CreatedJobHistoryScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
-
-            // Applicants
             Row(
               children: [
                 const Icon(

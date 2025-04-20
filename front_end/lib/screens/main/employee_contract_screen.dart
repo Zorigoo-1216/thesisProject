@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
-import '../../constant/styles.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+
+import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class EmployeeContractScreen extends StatefulWidget {
   const EmployeeContractScreen({super.key});
@@ -27,20 +29,27 @@ class _EmployeeContractScreenState extends State<EmployeeContractScreen>
   }
 
   Future<void> fetchContractData() async {
-    final response = await http.get(
-      Uri.parse('https://yourapi.com/api/contract/detail'),
-    );
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      setState(() {
-        contractHtml = data['contractHtml'] ?? "";
-        summaryHtml = data['summaryHtml'] ?? "";
-        isSigned = data['isSigned'] ?? false;
-        isLoading = false;
-      });
-    } else {
-      // handle error
+    try {
+      final response = await http.get(
+        Uri.parse('https://yourapi.com/api/contract/detail'),
+        headers: {
+          'Authorization': 'Bearer YOUR_TOKEN', // 🔐 Replace with actual token
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
+          contractHtml = data['contractHtml'] ?? "";
+          summaryHtml = data['summaryHtml'] ?? "";
+          isSigned = data['isSigned'] ?? false;
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
       setState(() => isLoading = false);
+      debugPrint("Error fetching contract: $e");
     }
   }
 
@@ -53,47 +62,39 @@ class _EmployeeContractScreenState extends State<EmployeeContractScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Гэрээ"),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.text),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: const [
-          Icon(Icons.notifications_none, color: AppColors.primary),
-          SizedBox(width: 12),
-          Icon(Icons.settings, color: AppColors.text),
-          SizedBox(width: 12),
-        ],
-        backgroundColor: AppColors.background,
-        elevation: 0,
-      ),
-      body:
-          isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : Column(
-                children: [
-                  TabBar(
-                    controller: _tabController,
-                    indicatorColor: AppColors.primary,
-                    labelColor: AppColors.primary,
-                    unselectedLabelColor: Colors.grey,
-                    tabs: const [
-                      Tab(text: 'Гэрээ'),
-                      Tab(text: 'Гэрээний хураангуй'),
-                    ],
-                  ),
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
+      body: CustomScrollView(
+        slivers: [
+          const CustomSliverAppBar(showTabs: false, showBack: true),
+          SliverFillRemaining(
+            child:
+                isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : Column(
                       children: [
-                        _contractHtmlView(contractHtml),
-                        _contractHtmlView(summaryHtml),
+                        TabBar(
+                          controller: _tabController,
+                          indicatorColor: AppColors.primary,
+                          labelColor: AppColors.primary,
+                          unselectedLabelColor: Colors.grey,
+                          tabs: const [
+                            Tab(text: 'Гэрээ'),
+                            Tab(text: 'Гэрээний хураангуй'),
+                          ],
+                        ),
+                        Expanded(
+                          child: TabBarView(
+                            controller: _tabController,
+                            children: [
+                              _contractHtmlView(contractHtml),
+                              _contractHtmlView(summaryHtml),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                ],
-              ),
+          ),
+        ],
+      ),
       bottomNavigationBar:
           !isSigned && contractHtml.isNotEmpty
               ? Padding(
@@ -127,7 +128,7 @@ class _EmployeeContractScreenState extends State<EmployeeContractScreen>
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
-                          // TODO: Cancel logic
+                          // TODO: Reject logic
                         },
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),

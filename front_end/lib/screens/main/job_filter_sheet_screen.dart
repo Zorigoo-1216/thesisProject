@@ -13,8 +13,8 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
   String? selectedLocation;
   bool isPartTime = false;
   bool isFullTime = false;
-  double minSalary = 10;
-  double maxSalary = 200;
+  double minSalary = 10000;
+  double maxSalary = 200000;
 
   bool isRecommendedTab = false;
 
@@ -47,7 +47,6 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
     );
   }
 
-  /// 🔘 Top Tabs
   Widget _buildTabs() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -55,17 +54,13 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
         _tabButton(
           title: "Шүүлтүүр",
           active: !isRecommendedTab,
-          onTap: () {
-            setState(() => isRecommendedTab = false);
-          },
+          onTap: () => setState(() => isRecommendedTab = false),
         ),
         const SizedBox(width: AppSpacing.lg),
         _tabButton(
           title: "Надад зориулсан",
           active: isRecommendedTab,
-          onTap: () {
-            setState(() => isRecommendedTab = true);
-          },
+          onTap: () => setState(() => isRecommendedTab = true),
         ),
       ],
     );
@@ -88,7 +83,6 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
     );
   }
 
-  /// 🔎 Filter Content
   Widget _filterContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,22 +103,14 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
         const SizedBox(height: AppSpacing.md),
 
         const Text("Ажиллах цагийн төрөл", style: AppTextStyles.subtitle),
-        CheckboxListTile(
-          value: isPartTime,
-          onChanged: (val) => setState(() => isPartTime = val ?? false),
-          title: const Text("Цагийн ажил"),
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
-        ),
-        CheckboxListTile(
-          value: isFullTime,
-          onChanged: (val) => setState(() => isFullTime = val ?? false),
-          title: const Text("Бүтэн цагийн"),
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
-        ),
-        const SizedBox(height: AppSpacing.sm),
+        _checkboxTile("Цагийн ажил", isPartTime, (val) {
+          setState(() => isPartTime = val ?? false);
+        }),
+        _checkboxTile("Бүтэн цагийн", isFullTime, (val) {
+          setState(() => isFullTime = val ?? false);
+        }),
 
+        const SizedBox(height: AppSpacing.sm),
         const Text("Цалингийн хэмжээ", style: AppTextStyles.subtitle),
         const SizedBox(height: 4),
         Row(
@@ -136,9 +122,9 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
         ),
         RangeSlider(
           values: RangeValues(minSalary, maxSalary),
-          min: 0,
-          max: 500,
-          divisions: 50,
+          min: 5000,
+          max: 300000,
+          divisions: 5000,
           activeColor: AppColors.primary,
           onChanged: (values) {
             setState(() {
@@ -151,7 +137,6 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
     );
   }
 
-  /// 🌟 Recommended Tab
   Widget _recommendedContent() {
     return const Padding(
       padding: EdgeInsets.only(top: 8),
@@ -162,7 +147,6 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
     );
   }
 
-  /// ⏹ Dropdown Widget
   Widget _dropdownField({
     required String label,
     required String? value,
@@ -181,20 +165,46 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
         ),
       ),
       value: value,
+      isExpanded: true,
+      icon: const Icon(Icons.arrow_drop_down),
       items:
-          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          items
+              .map(
+                (e) => DropdownMenuItem(
+                  value: e,
+                  child: Text(e, textAlign: TextAlign.start),
+                ),
+              )
+              .toList(),
       onChanged: onChanged,
     );
   }
 
-  /// 🔘 Bottom Search Button
+  Widget _checkboxTile(String title, bool value, Function(bool?) onChanged) {
+    return CheckboxListTile(
+      value: value,
+      onChanged: onChanged,
+      title: Text(title),
+      controlAffinity: ListTileControlAffinity.leading,
+      contentPadding: EdgeInsets.zero,
+    );
+  }
+
   Widget _buildSearchButton() {
     return SizedBox(
       width: double.infinity,
       height: 48,
       child: ElevatedButton(
         onPressed: () {
-          Navigator.pop(context);
+          Navigator.pop(context, {
+            'category': selectedCategory,
+            'location': selectedLocation,
+            'isPartTime': isPartTime,
+            'isFullTime': isFullTime,
+            'minSalary': minSalary,
+            'maxSalary': maxSalary,
+            'recommended': isRecommendedTab,
+          });
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,

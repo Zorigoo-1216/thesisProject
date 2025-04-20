@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/worker_model.dart';
 import '../../widgets/worker_card.dart';
 import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class WorkProgressScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -19,7 +20,10 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
 
   @override
   void initState() {
+    super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.index = widget.initialTabIndex;
+
     allWorkers = List.generate(5, (index) {
       return Worker(
         name: 'Worker $index',
@@ -31,7 +35,6 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
         status: 'pendingStart',
       );
     });
-    super.initState();
   }
 
   void resetSelection() {
@@ -44,16 +47,12 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
   }
 
   List<Worker> get filtered =>
-      allWorkers
-          .where(
-            (w) =>
-                _tabController.index == 0 && w.status == 'pendingStart' ||
-                _tabController.index == 1 &&
-                    ['working', 'verified'].contains(w.status) ||
-                _tabController.index == 2 &&
-                    ['completed', 'paiding'].contains(w.status),
-          )
-          .toList();
+      allWorkers.where((w) {
+        final tab = _tabController.index;
+        return tab == 0 && w.status == 'pendingStart' ||
+            tab == 1 && ['working', 'verified'].contains(w.status) ||
+            tab == 2 && ['completed', 'paiding'].contains(w.status);
+      }).toList();
 
   void confirmAction() {
     setState(() {
@@ -77,72 +76,72 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
   Widget build(BuildContext context) {
     final list = filtered;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Ажлын явц"),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.subtitle,
-          tabs: const [
-            Tab(text: 'Ажилчид'),
-            Tab(text: 'Ажлын явц'),
-            Tab(text: 'Төлбөр'),
-          ],
-          onTap: (_) => setState(() {}),
+    return DefaultTabController(
+      length: 3,
+      initialIndex: widget.initialTabIndex,
+      child: Scaffold(
+        body: NestedScrollView(
+          headerSliverBuilder:
+              (context, _) => [
+                CustomSliverAppBar(
+                  tabController: _tabController,
+                  showBack: true,
+                  showTabs: true,
+                ),
+              ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [_buildList(), _buildList(), _buildList()],
+          ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildList(), _buildList(), _buildList()],
-      ),
-      bottomNavigationBar:
-          list.isEmpty
-              ? null
-              : Padding(
-                padding: const EdgeInsets.all(16),
-                child:
-                    selecting
-                        ? Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: confirmAction,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                ),
-                                child: const Text(
-                                  "Батлах",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: resetSelection,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.primary,
-                                  side: const BorderSide(
-                                    color: AppColors.primary,
+        bottomNavigationBar:
+            list.isEmpty
+                ? null
+                : Padding(
+                  padding: const EdgeInsets.all(16),
+                  child:
+                      selecting
+                          ? Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: confirmAction,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                  ),
+                                  child: const Text(
+                                    "Батлах",
+                                    style: TextStyle(color: Colors.white),
                                   ),
                                 ),
-                                child: const Text("Цуцлах"),
                               ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: resetSelection,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primary,
+                                    side: const BorderSide(
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                  child: const Text("Цуцлах"),
+                                ),
+                              ),
+                            ],
+                          )
+                          : ElevatedButton(
+                            onPressed: () => setState(() => selecting = true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
                             ),
-                          ],
-                        )
-                        : ElevatedButton(
-                          onPressed: () => setState(() => selecting = true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            child: const Text(
+                              "Сонгох",
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
-                          child: const Text(
-                            "Сонгох",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-              ),
+                ),
+      ),
     );
   }
 

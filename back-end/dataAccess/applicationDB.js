@@ -39,7 +39,7 @@ const getAllAppliedJobsByUserId = async (userId) => {
           jobs.push(new viewJobDTO(job));
         }
       }
-      return jobs;
+      return Array.isArray(jobs) ? jobs : [];
 }
 // ajild huselt ilgeesen humuusiig erembeleed ilgeene
 const getAppliedUsersByJobId = async (jobId) => {
@@ -47,64 +47,18 @@ const getAppliedUsersByJobId = async (jobId) => {
   if (!job) throw new Error("Job not found");
   
     const applications = await Application.find({ jobId });
-    const usersWithRating = [];
-    
-    for (const application of applications) {
-      const user = await User.findById(application.userId);
-      if (user) {
-        let branchScore = 0;
-        
-        if (Array.isArray(user.averageRating?.byBranch)) {
-          const branchRating = user.averageRating.byBranch.find(
-            (r) => r.brachType === job.branch
-          );
-          branchScore = branchRating?.score || 0;
-        } else {
-          branchScore = user.averageRating?.byBranch?.[job.branchType] || 0;
-        }
-        
-        usersWithRating.push({
-          user: new viewUserDTO(user),
-          rating: branchScore
-        });
-      }
-    }
-  
-    // Эрэмбэлэх
-    usersWithRating.sort((a, b) => b.rating - a.rating);
-    
-    // Зөвхөн хэрэглэгчийн DTO-г буцаана
-    return usersWithRating.map(obj => obj.user);
+    const users = applications.map(app => User.findById(app.userId));
+    return users.map(user => new viewUserDTO(user));
   };
 
   const getInterviewUsers = async (jobId) => {
     const job = await Job.findById(jobId);
     if (!job) throw new Error("Job not found");
-  
-    const applications = await Application.find({ jobId, status: 'interview' });
-    const branch = job.branchType || job.branch;
-  
-    const usersWithRating = [];
-  
-    for (const application of applications) {
-      const user = await User.findById(application.userId);
-      if (user) {
-        const branchRating = user.averageRating?.byBranch?.find(
-          (r) => r.branch === branch
-        );
-        const branchScore = branchRating?.score || 0;
-  
-        usersWithRating.push({
-          user: new viewUserDTO(user),
-          rating: branchScore,
-        });
-      }
-    }
-  
+    const applications = await Application.find({ jobId });
+    const users = applications.map(app => User.findById(app.userId)); 
+    return users.map(user => new viewUserDTO(user));
     // Эрэмбэлэх
-    usersWithRating.sort((a, b) => b.rating - a.rating);
-  
-    return usersWithRating.map((obj) => obj.user);
+   
   };
   
 
@@ -112,8 +66,8 @@ const getAppliedUsersByJobId = async (jobId) => {
 const getApplciationByJobId = async (jobId) => {
   return await Application.find({ jobId: jobId });
 }
-const getApplicationFilteredByJobId = async (jobId, status) => {
-  return await Application.find({ jobId: jobId, status: status });
+const getApplicationFilteredByJobId = async (jobId) => {
+  return await Application.find({ jobId: { $in: jobId } });
 }
 
 // hereglegchiin ilgeesen huseltuudiig olno ene ni idevhitei bga ajluudiig songono
@@ -147,7 +101,7 @@ const getCandidatesByJob = async (jobId) => {
     }
   }
   
-  return candidates;
+  return Array.isArray(candidates) ? candidates : [];
 }
 
 
@@ -179,5 +133,6 @@ const updateStatus = async (jobId, userId, status) => {
     getInterviewUsers,
     getCandidatesByJob,
     cancelApplication,
-    updateStatus
+    updateStatus,
+    getApplicationFilteredByJobId
 };

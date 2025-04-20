@@ -25,6 +25,7 @@ import '../screens/main/job_histoty_screen.dart';
 import '../screens/main/created_job_history.dart';
 import '../screens/main/contract_history_screen.dart';
 import '../screens/main/sent_application_history.dart';
+import '../screens/main/notification_screen.dart';
 
 class AppRoutes {
   static Map<String, WidgetBuilder> routes = {
@@ -41,12 +42,45 @@ class AppRoutes {
     //'/job-request': (context) => const JobRequestScreen(),
     '/job-list-screen': (context) => const JobListScreen(),
 
-    '/suitable-workers':
-        (context) => const JobRequestScreen(initialTabIndex: 0),
-    '/job-request': (context) => const JobRequestScreen(initialTabIndex: 1),
-    '/interview': (context) => const JobRequestScreen(initialTabIndex: 2),
-    '/contract-candidates':
-        (context) => const JobRequestScreen(initialTabIndex: 3),
+    '/suitable-workers': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args == null || !(args is Map) || !args.containsKey('jobId')) {
+        debugPrint("Invalid args: $args");
+        return const Scaffold(body: Center(child: Text("Invalid Job ID")));
+      }
+      return JobRequestScreen(
+        initialTabIndex: 0,
+        jobId: args['jobId'].toString(), // Ensure jobId is a String
+      );
+    },
+
+    '/job-request': (context) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is! Map<String, dynamic> || !args.containsKey('jobId')) {
+        debugPrint("❌ /job-request route: invalid or missing arguments");
+        return const Scaffold(body: Center(child: Text("Invalid job ID")));
+      }
+      return JobRequestScreen(initialTabIndex: 1, jobId: args['jobId']);
+    },
+    '/interview': (context) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is! Map<String, dynamic> || !args.containsKey('jobId')) {
+        debugPrint("❌ /interview route: invalid or missing arguments");
+        return const Scaffold(body: Center(child: Text("Invalid job ID")));
+      }
+      return JobRequestScreen(initialTabIndex: 2, jobId: args['jobId']);
+    },
+    '/contract-candidates': (context) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is! Map<String, dynamic> || !args.containsKey('jobId')) {
+        debugPrint(
+          "❌ /contract-candidates route: invalid or missing arguments",
+        );
+        return const Scaffold(body: Center(child: Text("Invalid job ID")));
+      }
+      return JobRequestScreen(initialTabIndex: 3, jobId: args['jobId']);
+    },
+
     '/job-contract': (context) => const JobContractScreen(initialTabIndex: 0),
     '/contract-employees':
         (context) => const JobContractScreen(initialTabIndex: 1),
@@ -67,5 +101,6 @@ class AppRoutes {
     '/contract-history': (context) => const ContractHistoryScreen(),
     '/sent-applicaiton-history':
         (context) => const SentApplicationHistoryScreen(),
+    '/notification': (context) => const NotificationScreen(),
   };
 }

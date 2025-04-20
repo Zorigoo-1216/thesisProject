@@ -1,5 +1,14 @@
+//import 'dart:math' as console;
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import '../../constant/styles.dart';
+import '../../constant/api.dart';
+import '../../models/user_model.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,6 +20,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  UserModel? user;
+  bool isLoading = true;
 
   final List<Map<String, dynamic>> menuItems = [
     {"title": "Хувийн мэдээлэл", "route": "/profile-detail"},
@@ -24,6 +35,45 @@ class _ProfileScreenState extends State<ProfileScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      print("Token not found");
+      return;
+    }
+
+    final response = await http.get(
+      Uri.parse('${baseUrl}auth/profile'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    print("Status code: ${response.statusCode}");
+    print("Raw body: ${response.body}");
+
+    try {
+      final data = jsonDecode(response.body); // This must be a Map
+      print("Decoded type: ${data.runtimeType}"); // <-- must be Map
+
+      setState(() {
+        user = UserModel.fromJson(
+          data,
+        ); // <- only works if data is Map<String, dynamic>
+        isLoading = false;
+      });
+    } catch (e) {
+      print("Error parsing response: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -34,41 +84,26 @@ class _ProfileScreenState extends State<ProfileScreen>
         body: NestedScrollView(
           headerSliverBuilder:
               (context, innerBoxIsScrolled) => [
-                SliverAppBar(
-                  floating: true,
-                  pinned: true,
-                  elevation: 0,
-                  backgroundColor: AppColors.background,
-                  leading: const BackButton(color: AppColors.text),
-                  actions: const [
-                    Icon(Icons.notifications_none, color: AppColors.iconColor),
-                    SizedBox(width: 12),
-                    Icon(Icons.settings, color: AppColors.text),
-                    SizedBox(width: 12),
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundImage: AssetImage('assets/images/avatar.png'),
-                    ),
-                    SizedBox(width: 12),
-                  ],
-                  bottom: TabBar(
-                    controller: _tabController,
-                    labelColor: AppColors.primary,
-                    unselectedLabelColor: Colors.grey,
-                    tabs: const [
-                      Tab(text: "Үндсэн"),
-                      Tab(text: "Хуваарь"),
-                      Tab(text: "Үнэлгээ"),
-                    ],
-                  ),
+                CustomSliverAppBar(
+                  tabController: _tabController,
+                  showTabs: true,
+                  showBack: true,
                 ),
                 SliverToBoxAdapter(
-                  child: Column(
-                    children: [
-                      const ProfileInfo(),
-                      const Divider(thickness: 1, color: Colors.grey),
-                    ],
-                  ),
+                  child:
+                      isLoading
+                          ? const Padding(
+                            padding: EdgeInsets.all(24),
+                            child: Center(child: CircularProgressIndicator()),
+                          )
+                          : user == null
+                          ? const Center(child: Text("Алдаа гарлаа"))
+                          : Column(
+                            children: [
+                              ProfileInfo(user: user!),
+                              const Divider(thickness: 1, color: Colors.grey),
+                            ],
+                          ),
                 ),
               ],
           body: TabBarView(
@@ -95,16 +130,28 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _scheduleTab() {
-    return const Center(child: Text("📆 Ажлын хуваарь энд гарна."));
+    return const Center(
+      child: Text("\ud83d\uddd3\ufe0f Ажлын хуваарь энд гарна."),
+    );
   }
 
   Widget _ratingTab() {
-    return const Center(child: Text("⭐ Үнэлгээний дэлгэрэнгүй энд гарна."));
+    return Center(
+      child:
+          user == null
+              ? const Text(
+                "\u04ae\u043d\u044d\u043b\u0433\u044d\u044d \u043e\u043b\u0434\u0441\u043e\u043d\u0433\u04af\u0439",
+              )
+              : Text(
+                "\u2b50 \u04ae\u043d\u044d\u043b\u0433\u044d\u044d: ${user!.averageRating.overall}",
+              ),
+    );
   }
 }
 
 class ProfileInfo extends StatelessWidget {
-  const ProfileInfo({super.key});
+  final UserModel user;
+  const ProfileInfo({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -117,23 +164,26 @@ class ProfileInfo extends StatelessWidget {
             backgroundImage: AssetImage('assets/images/avatar.png'),
           ),
           const SizedBox(height: 8),
-          const Text("Full name", style: AppTextStyles.heading),
-          const Text("Барилгын инженер", style: AppTextStyles.subtitle),
+          Text(user.name, style: AppTextStyles.heading),
+          Text(
+            user.profile?.mainBranch ?? 'Салбар тодорхойгүй',
+            style: AppTextStyles.subtitle,
+          ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _infoCard("RATING", "4.5", Icons.star),
+              _infoCard("RATING", "${user.averageRating.overall}", Icons.star),
               const SizedBox(width: 12),
-              _infoCard("PROJECTS", "50", Icons.work),
+              _infoCard("ROLE", user.role, Icons.person),
             ],
           ),
           const SizedBox(height: 12),
           const Text("Email", style: AppTextStyles.subtitle),
-          const Text("mike.williams@gmail.com"),
+          Text(user.email ?? "-"),
           const SizedBox(height: 6),
           const Text("Phone", style: AppTextStyles.subtitle),
-          const Text("Call: (+1)\n202-555-0151", textAlign: TextAlign.center),
+          Text(user.phone ?? "-", textAlign: TextAlign.center),
           const SizedBox(height: 12),
         ],
       ),

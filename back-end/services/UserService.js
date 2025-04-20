@@ -26,8 +26,12 @@ const registerUser = async ({ firstName, lastName, phone, password, role, gender
 
 const loginByEmail = async (email, password) => {
   const user = await userDB.getUserByEmailFull(email); // шинэ функц, доор нэмнэ
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    throw new Error('Invalid credentials');
+  if (!user) {
+    throw new Error('Хэрэглэгч олдсонгүй');
+  }
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
+  if (!isMatch) {
+    throw new Error('Нууц үг буруу байна');
   }
 
   user.lastActiveAt = new Date();
@@ -39,8 +43,12 @@ const loginByEmail = async (email, password) => {
 
 const loginByPhone = async (phone, password) => {
   const user = await userDB.getUserByPhoneFull(phone); // шинэ функц, доор нэмнэ
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    throw new Error('Invalid credentials');
+  if (!user) {
+    throw new Error('Хэрэглэгч олдсонгүй');
+  }
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
+  if (!isMatch) {
+    throw new Error('Нууц үг буруу байна');
   }
 
   user.lastActiveAt = new Date();

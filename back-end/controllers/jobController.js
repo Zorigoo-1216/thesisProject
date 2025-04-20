@@ -4,19 +4,31 @@ const jobService = require('../services/JobService');
 //----------------------------Create job --------------------
 const createJob = async (req, res) => {
   try {
-    console.log('📦 Job Data:', req.body);
-    const employerId = req.user.id;
-    const job = await jobService.createJob({ ...req.body, employerId });
-    res.status(201).json({ message: 'Job created', job });
+    const jobData = req.body;
+    const employerId = req.user?.id;
+
+    if (!employerId) {
+      return res.status(401).json({ error: 'Unauthorized: Employer not found' });
+    }
+
+    // Шууд дамжуулна
+    const job = await jobService.createJob(jobData, employerId);
+
+    return res.status(201).json({ message: 'Job created successfully', job });
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    console.error('Error creating job:', error);
+    return res.status(500).json({ error: error.message });
   }
 };
+
+
+
 
 //---------------------------- job list avah--------------------------------------------------------
 const getJobList = async (req, res) => {
   try {
-    const jobs = await jobService.getJobList();
+    const userId = req.user?.id;
+    const jobs = await jobService.getJobList(userId);
     res.status(200).json({ message: 'Job list fetched successfully', jobs });
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -67,6 +79,7 @@ const getSuitableJobsForUser = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
 const editJob = async (req, res) => {
   try {
     const jobId = req.params.id;
@@ -92,10 +105,25 @@ const deleteJob = async (req, res) => {
 };
 
 const getMyPostedJobs = async (req, res) => {
+  console.log("Received request for posted jobs...");
   try {
     const userId = req.user.id;
+    console.log("User ID from request:", userId);
     const jobs = await jobService.getMyPostedJobs(userId);
     res.status(200).json({ message: 'My posted jobs fetched successfully', jobs });
+  } catch (error) {
+    console.error("Error fetching posted jobs:", error.message);
+    res.status(400).json({ error: error.message });
+  }
+}
+
+const getSuitableWorkersByJob = async (req, res) => {
+  try {
+    const jobId = req.params.id;
+    console.log("📥 GET /jobs/:id/suitable-workers jobId:", jobId);
+    if (!jobId) return res.status(400).json({ error: "Job ID required" });
+    const workers = await jobService.getSuitableWorkersByJob(jobId);
+    res.status(200).json({ message: 'Suitable workers fetched successfully', workers : workers || [] });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -110,5 +138,6 @@ module.exports = {
   getSuitableJobsForUser,
   editJob,
   deleteJob,
-  getMyPostedJobs
+  getMyPostedJobs,
+  getSuitableWorkersByJob
 };

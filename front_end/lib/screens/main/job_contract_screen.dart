@@ -189,18 +189,18 @@ class _JobContractScreenState extends State<JobContractScreen>
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case "Accepted":
-        return Colors.green;
-      case "Rejected":
-        return Colors.red;
-      case "Pending":
-        return Colors.orange;
-      default:
-        return AppColors.primary;
-    }
-  }
+  // Color _getStatusColor(String status) {
+  //   switch (status) {
+  //     case "Accepted":
+  //       return Colors.green;
+  //     case "Rejected":
+  //       return Colors.red;
+  //     case "Pending":
+  //       return Colors.orange;
+  //     default:
+  //       return AppColors.primary;
+  //   }
+  // }
 
   Widget _buildEmployeesTab() {
     return ListView.builder(

@@ -1,59 +1,88 @@
 class Job {
-  final String id;
+  final String jobId;
   final String title;
-  final List<String> description;
-  final List<String> requirements;
+  final String description;
   final String location;
   final Salary salary;
-  final String seeker;
-  final int capacity;
-  final String branch;
+  final String salaryType;
+  final String currency;
   final String jobType;
-  final String level;
-  final bool possibleForDisabled;
+  final List<String> requirements;
+  final String experienceLevel;
   final String status;
+  final bool haveInterview;
   final String startDate;
   final String endDate;
-  final String workStartTime;
-  final String workEndTime;
-  final String? breakStartTime;
-  final String? breakEndTime;
-  final bool haveInterview;
+  final int capacity;
+  final bool possibleForDisabled;
   final String employerName;
   final String postedAgo;
-  final List<String> tags;
+  final bool isApplied;
 
   Job({
-    required this.id,
+    required this.jobId,
     required this.title,
     required this.description,
-    required this.requirements,
     required this.location,
     required this.salary,
-    required this.seeker,
-    required this.capacity,
-    required this.branch,
+    required this.salaryType,
+    required this.currency,
     required this.jobType,
-    required this.level,
-    required this.possibleForDisabled,
+    required this.requirements,
+    required this.experienceLevel,
     required this.status,
+    required this.haveInterview,
     required this.startDate,
     required this.endDate,
-    required this.workStartTime,
-    required this.workEndTime,
-    this.breakStartTime,
-    this.breakEndTime,
-    required this.haveInterview,
+    required this.capacity,
+    required this.possibleForDisabled,
     required this.employerName,
     required this.postedAgo,
-    required this.tags,
+    this.isApplied = false,
   });
+
+  factory Job.fromJson(Map<String, dynamic> json) {
+    return Job(
+      jobId: json['jobId'] ?? json['_id'] ?? '',
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      location: json['location'] ?? '',
+      salary: Salary.fromJson(json['salary'] ?? {}),
+      salaryType: json['salaryType'] ?? 'daily',
+      currency: json['currency'] ?? 'MNT',
+      jobType: json['jobType'] ?? '',
+      requirements: List<String>.from(json['requirements'] ?? []),
+      experienceLevel: json['experienceLevel'] ?? 'none',
+      status: json['status'] ?? '',
+      haveInterview: json['haveInterview'] ?? false,
+      startDate: json['startDate'] ?? '',
+      endDate: json['endDate'] ?? '',
+      capacity: json['capacity'] ?? 0,
+      possibleForDisabled: json['possibleForDisabled'] ?? false,
+      employerName: json['employerName'] ?? '',
+      postedAgo: json['postedAgo'] ?? '',
+      isApplied: json['isApplied'] ?? false,
+    );
+  }
 }
 
 class Salary {
   final int amount;
-  final String currency;
   final String type;
+  final String currency;
 
-  Salary({required this.amount, required this.currency, required this.type});
+  Salary({required this.amount, required this.type, required this.currency});
+
+  String getSalaryFormatted() {
+    final typeLabel = {'daily': '/ өдөр', 'hourly': '/ цаг'}[type] ?? '';
+    return '$amount₮ $typeLabel';
+  }
+
+  factory Salary.fromJson(Map<String, dynamic> json) {
+    return Salary(
+      amount: json['amount'] ?? 0,
+      type: json['type'] ?? 'daily',
+      currency: json['currency'] ?? 'MNT',
+    );
+  }
 }

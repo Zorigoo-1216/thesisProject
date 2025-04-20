@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class RateEmployeeScreen extends StatefulWidget {
   const RateEmployeeScreen({super.key});
@@ -50,86 +51,92 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Үнэлгээ өгөх"),
-        actions: const [
-          Icon(Icons.notifications_none, color: AppColors.primary),
-          SizedBox(width: 16),
-          Icon(Icons.settings, color: Colors.black),
-          SizedBox(width: 16),
-        ],
-      ),
-      body: ListView.builder(
-        itemCount: 5,
-        padding: const EdgeInsets.all(AppSpacing.md),
-        itemBuilder: (context, index) {
-          return Card(
-            margin: const EdgeInsets.only(bottom: AppSpacing.md),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radius),
-            ),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const CircleAvatar(
-                    backgroundImage: AssetImage('assets/images/avatar.png'),
-                    radius: 28,
-                  ),
-                  title: const Text("Full name"),
-                  subtitle: const Text("99010101"),
-                  trailing: IconButton(
-                    icon: Icon(
-                      isExpanded[index]
-                          ? Icons.keyboard_arrow_up
-                          : Icons.keyboard_arrow_down,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        isExpanded[index] = !isExpanded[index];
-                      });
-                    },
-                  ),
-                ),
-                if (isExpanded[index])
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
+      body: CustomScrollView(
+        slivers: [
+          const CustomSliverAppBar(showTabs: false, showBack: true),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: 5,
+                itemBuilder: (context, index) {
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSpacing.radius),
                     ),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        buildStarRow(index),
-                        Text(
-                          "${selectedRatings[index]} оноо",
-                          style: const TextStyle(color: AppColors.subtitle),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: commentControllers[index],
-                          decoration: InputDecoration(
-                            hintText: "Сэтгэгдэл бичих...",
-                            filled: true,
-                            fillColor: Colors.grey.shade100,
-                            suffixIcon: const Icon(
-                              Icons.send,
-                              color: AppColors.primary,
+                        ListTile(
+                          leading: const CircleAvatar(
+                            backgroundImage: AssetImage(
+                              'assets/images/avatar.png',
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppSpacing.radius,
-                              ),
-                              borderSide: BorderSide.none,
+                            radius: 28,
+                          ),
+                          title: const Text("Full name"),
+                          subtitle: const Text("99010101"),
+                          trailing: IconButton(
+                            icon: Icon(
+                              isExpanded[index]
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
                             ),
+                            onPressed: () {
+                              setState(() {
+                                isExpanded[index] = !isExpanded[index];
+                              });
+                            },
                           ),
                         ),
+                        if (isExpanded[index])
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.sm,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                buildStarRow(index),
+                                Text(
+                                  "${selectedRatings[index]} оноо",
+                                  style: const TextStyle(
+                                    color: AppColors.subtitle,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: commentControllers[index],
+                                  decoration: InputDecoration(
+                                    hintText: "Сэтгэгдэл бичих...",
+                                    filled: true,
+                                    fillColor: Colors.grey.shade100,
+                                    suffixIcon: const Icon(
+                                      Icons.send,
+                                      color: AppColors.primary,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        AppSpacing.radius,
+                                      ),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-              ],
+                  );
+                },
+              ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }

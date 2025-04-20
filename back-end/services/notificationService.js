@@ -20,25 +20,11 @@ const sendBulkNotifications = async (users, job) => {
 };
 
 // ajillah huselt ilgeesen medegdel ilgeene
-const sendapplyNotToEmployer = async (application) => {
-  const job = await JobDb.getJobById(application.jobId);
-  const user = await UserDb.getUserById(application.userId);
 
-  const message = `Таны "${job.title}" ажилд  ${user.lastName} хүсэлт илгээсэн байна.`;
-  const notification = {
-    userId: job.employerId,
-    type: 'application_received',
-    title: 'Шинэ өргөдөл ирлээ',
-    message,
-    isRead: false,
-    createdAt: new Date()
-  };
-  return await NotificationDb.createNotification(notification);
-}
 const createNotification = async (notification) => {
   return await NotificationDb.createNotification(notification);
 }
 
 module.exports = {
-  sendBulkNotifications, sendapplyNotToEmployer
+  sendBulkNotifications,createNotification
 };

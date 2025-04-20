@@ -2,8 +2,10 @@ const applicationDB = require('../dataAccess/applicationDB');
 const Application = require('../models/Application');
 const Job = require('../models/Job');
 const notificationService = require("../services/notificationService");
-const JobDb = require("../dataAccess/jobDB")
-
+const JobDb = require("../dataAccess/jobDB");
+const User = require('../models/User');
+const userDB = require("../dataAccess/userDB");
+const viewUserDTO = require("../viewModels/viewUserDTO");
 // ajild huselt ilgeeh
 const applyToJob = async (userId, jobId) => {
   const existing = await Application.findOne({ userId, jobId });
@@ -44,35 +46,10 @@ const getMyAppliedJobs = async (userId) => {
 }
 // ajliin huselt ilgeesen buh ajluudiig avah
 const getMyAllAppliedJobs = async (userId) => {
-  return await applicationDB.getAllAppliedJobsByUserId(userId);
+  const application = await applicationDB.getAllAppliedJobsByUserId(userId);
+  return Array.isArray(application) ? application : [];
 }
 // tuhain ajild huselt ilgeesen ajilchdiig avah
-const getAppliedUsersByJob = async (jobId) => {
-  return await applicationDB.getAppliedUsersByJobId(jobId);
-}
-const selectCandidates = async (jobId, selectedUserIds) => {
-  const job = await JobDb.getJobById(jobId);
-  if (!job) throw new Error("Job not found");
-
-  const allApplications = await applicationDB.getApplciationByJobId(jobId);
-  const updates = allApplications.map(app => {
-    const isSelected = selectedUserIds.includes(app.userId.toString());
-    const status = job.haveInterview
-      ? (isSelected ? 'interview' : 'rejected')
-      : (isSelected ? 'accepted' : 'rejected');
-
-    return Application.findByIdAndUpdate(app._id, { status });
-  });
-
-  // Хэрвээ interview байхгүй бол шууд employees талбарт нэмнэ
-  if (!job.haveInterview) {
-    job.employees = selectedUserIds;
-    await job.save();
-  }
-
-  await Promise.all(updates);
-  return "Сонгогдсон ажилчид амжилттай бүртгэгдлээ";
-}
 
 const selectCandidatesfromInterview = async (jobId, selectedUserIds) => {
   if (!selectedUserIds || selectedUserIds.length === 0) {
@@ -104,28 +81,153 @@ const selectCandidatesfromInterview = async (jobId, selectedUserIds) => {
 
   return "Сонгогдсон ажилчид амжилттай бүртгэгдлээ";
 };
+const selectCandidates = async (jobId, selectedUserIds) => {
+  const job = await JobDb.getJobById(jobId);
+  if (!job) throw new Error("Job not found");
+
+  const allApplications = await applicationDB.getApplciationByJobId(jobId);
+  const updates = allApplications.map(app => {
+    const isSelected = selectedUserIds.includes(app.userId.toString());
+    const status = job.haveInterview
+      ? (isSelected ? 'interview' : 'rejected')
+      : (isSelected ? 'accepted' : 'rejected');
+
+    return Application.findByIdAndUpdate(app._id, { status });
+  });
+
+  // Хэрвээ interview байхгүй бол шууд employees талбарт нэмнэ
+  if (!job.hasInterview) {
+    job.employees = selectedUserIds;
+    await job.save();
+  }
+
+  await Promise.all(updates);
+  return "Сонгогдсон ажилчид амжилттай бүртгэгдлээ";
+}
+
+
 
 
 const getInterviewsByJob = async (jobId) => {
-  const job = await JobDb.getJobById(jobId);
+  const job = await Job.findById(jobId);
   if (!job) throw new Error("Job not found");
-  const applications = await applicationDB.getInterviewUsers(jobId);
-  return applications;
-}
+
+  const applications = await Application.find({ jobId });
+  const usersWithRating = [];
+
+  for (const application of applications) {
+    const user = await User.findById(application.userId);
+    if (user) {
+      let branchScore = 0;
+
+      if (Array.isArray(user.averageRating?.byBranch)) {
+        const branchRating = user.averageRating.byBranch.find(
+          (r) => r.branchType === job.branch
+        );
+        branchScore = branchRating?.score || 0;
+      }
+
+      usersWithRating.push({
+        user: new viewUserDTO(user),
+        rating: branchScore,
+      });
+    }
+  }
+
+  // Эрэмбэлэх
+  usersWithRating.sort((a, b) => b.rating - a.rating);
+
+  // Зөвхөн хэрэглэгчийн DTO-г буцаах
+  return usersWithRating.map(obj => obj.user);
+};
+const getAppliedUsersByJob = async (jobId) => {
+  const job = await Job.findById(jobId);
+  if (!job) throw new Error("Job not found");
+
+  const applications = await Application.find({ jobId });
+  console.log("applications", applications);
+  const usersWithRating = [];
+
+  for (const app of applications) {
+    const user = await User.findById(app.userId);
+
+    if (user) {
+      const viewUser = new viewUserDTO(user);
+      const branchType = job.branch;
+
+      // ✅ Тухайн ажлын төрөлтэй тохирох үнэлгээг авах
+      let branchRating = 0;
+      const found = Array.isArray(viewUser.averageRating.byBranch)
+        ? viewUser.averageRating.byBranch.find(
+            r => r.branchType === branchType
+          )
+        : null;
+      branchRating = found?.score || 0;
+
+      usersWithRating.push({
+        user: viewUser,
+        rating: branchRating,
+      });
+    }
+  }
+
+  console.log("usersWithRating", usersWithRating);
+
+  // ✅ Рейтингээр бууруулж эрэмбэлэх
+  usersWithRating.sort((a, b) => b.rating - a.rating);
+
+  // ✅ Зөвхөн user болон rating-г буцаана
+  return usersWithRating;
+};
 const getEmployeesByJob = async (jobId) => {
-  const job = await JobDb.getJobById(jobId);
+  const job = await Job.findById(jobId);
   if (!job) throw new Error("Job not found");
-  const employers = await JobDb.getEmployeesByJob(jobId);
-  return employers;
-}
+
+  const employees = await Promise.all(job.employees.map(async (employeeId) => {
+    const user = await User.findById(employeeId.toString());
+    return user;
+  }));
+
+  // Эрэмбэлэх: тухайн ажлын branch-р хамгийн өндөр score-той хэрэглэгчийг эхэнд нь
+  employees.sort((a, b) => {
+    const branch = job.branch;
+    const aScore = a.averageRating?.byBranch?.find(r => r.branchType === branch)?.score || 0;
+    const bScore = b.averageRating?.byBranch?.find(r => r.branchType === branch)?.score || 0;
+    return bScore - aScore;
+  });
+
+  return employees.map(user => new ViewUserDTO(user));
+};
+
 
 
 const getCandidatesByJob = async (jobId) => {
   const job = await Job.findById(jobId);
   if (!job) throw new Error("Job not found");
-  const candidates = await applicationDB.getCandidatesByJob(jobId);
-  return candidates;
-}
+
+  const applications = await Application.find({ jobId, status: "accepted" });
+  const usersWithRating = [];
+
+  for (const application of applications) {
+    const user = await userDB.getUserById(application.userId); //await  User.findById(application.userId);
+    if (user) {
+      const byBranch = user.averageRating?.byBranch || [];
+      const ratingEntry = byBranch.find(r => r.branchType === job.branch);
+      const branchScore = ratingEntry?.score || 0;
+
+      usersWithRating.push({
+        user: new viewUserDTO(user),
+        rating: branchScore
+      });
+    }
+  }
+
+  // ✨ Эрэмбэлэх: өндөр оноотой нь эхэнд
+  usersWithRating.sort((a, b) => b.rating - a.rating);
+
+  return usersWithRating;
+};
+
 
 
 const cancelApplication = async (userId, jobId) => {

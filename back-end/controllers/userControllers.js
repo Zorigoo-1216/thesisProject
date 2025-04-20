@@ -16,24 +16,29 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, phone, password } = req.body;
+    const { emailOrPhone, password } = req.body;
     let user;
-    
-    if (email) {
-      user = await userService.loginByEmail(email, password);
-    } else if (phone) {
-      user = await userService.loginByPhone(phone, password);
-    } else {
-      throw new Error('Email or phone is required');
+
+    if (!emailOrPhone || !password) {
+      throw new Error('Email/Phone болон нууц үг шаардлагатай');
     }
 
-    res.status(200).json({ message: 'Login successful', user: user.user, token: user.token });
+    if (emailOrPhone.includes('@')) {
+      user = await userService.loginByEmail(emailOrPhone, password);
+    } else {
+      user = await userService.loginByPhone(emailOrPhone, password);
+    }
 
-
+    res.status(200).json({
+      message: 'Login successful',
+      user: user.user,
+      token: user.token,
+    });
   } catch (err) {
     res.status(401).json({ error: err.message });
   }
 };
+
 
 const getProfile = async (req, res) => {
   try {

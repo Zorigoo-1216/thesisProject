@@ -2,22 +2,31 @@ const jobDB = require("../dataAccess/jobDB");
 const userDB = require("../dataAccess/userDB");
 const notificationService = require("../services/notificationService"); // зөв service
 const viewJobDTO = require("../viewModels/viewJobDTO"); // jobDTO
+const mongoose = require('mongoose');
+const applicationDB = require("../dataAccess/applicationDB"); // applicationDB
 // ajliin zar uusgeh 
 const createJob = async (jobData, employerId) => {
-  if (jobData.haveInterview) {
-    console.log("🗓 Interview required. Please prepare interview setup.");
-  }
-  const job = await jobDB.createJob(jobData, employerId); // Job үүсгэх
+  const dataToSave = {
+    ...jobData,
+    employerId,
+  };
+  // Save job to database
+  const job = await jobDB.createJob(dataToSave);
 
-  const eligibleUsers = await findEligibleUsers(job); 
-  console.log("Eligible users:", eligibleUsers?.length || 0);
+  // Match eligible users
+  const eligibleUsers = await findEligibleUsers(job);
+  console.log("✅ Eligible users found:", eligibleUsers?.length || 0);
 
+  // Notify users if applicable
   if (Array.isArray(eligibleUsers) && eligibleUsers.length > 0) {
-    await notifyEligibleUsers(job, eligibleUsers); // мэдэгдэл илгээх
+    await notifyEligibleUsers(job, eligibleUsers);
   }
 
   return job;
 };
+
+
+
 // ajild tohiroh ajilchdiig oloh
 const findEligibleUsers = async (job) => {
   const combinedText = [job.title, ...(job.description || [])].join(" ").toLowerCase();
@@ -41,7 +50,8 @@ const findEligibleUsers = async (job) => {
     ]
   };
 
-  return await userDB.findUsersByQuery(query);
+  const result = await userDB.findUsersByQuery(query);
+  return Array.isArray(result) ? result : [];
 };
 
 // tohirson ajilchdad medegdel ilgeeh
@@ -50,10 +60,37 @@ const notifyEligibleUsers = async (job, users) => {
 };
 
 // ajliin jagsaaltiig default aar haruulah
-const getJobList = async () => {
-  const jobs = await jobDB.getdJoblist(); // Ажлын зарын жагсаалтыг авах
-  return jobs;
+const getJobList = async (userId) => {
+  // Бүх job-уудыг авна
+  const allJobs = await jobDB.getdJoblist();
+
+  // ✅ Өөрийн үүсгэсэн job-уудыг хасна
+  const jobs = allJobs.filter(job => job.employerId.toString() !== userId.toString());
+
+  // Ажил олгогчийн мэдээллийг авна
+  const users = await userDB.getUsersByIds(jobs.map(job => job.employerId));
+
+  // Job бүр дээрх хүсэлтүүдийг авна
+  const applications = await applicationDB.getApplicationFilteredByJobId(
+    jobs.map(job => job._id)
+  );
+
+  // ViewJobDTO үүсгэнэ
+  const finalJobs = jobs.map(job => {
+    const employer = users.find(u => u._id.toString() === job.employerId.toString());
+    const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
+
+    // Хэрэглэгч энэ ажилд өргөдөл өгсөн эсэх
+    const applied = jobApplications.some(app => app.userId.toString() === userId?.toString());
+
+    return new viewJobDTO(job, jobApplications, employer, applied);
+  });
+
+  return finalJobs;
 };
+
+
+
 
 // ajliin zar filter eer haih
 const searchJobs = async (filters) => {
@@ -61,7 +98,9 @@ const searchJobs = async (filters) => {
     endDate: { $gt: new Date() }, 
     status: 'open'               
   };
-
+  if (filters.title) {
+    query.title = { $regex: filters.title, $options: 'i' }; // ✅ FIXED
+  }
   if (filters.branchType) {
     query.branchType = filters.branchType;
   }
@@ -88,7 +127,16 @@ const searchJobs = async (filters) => {
     query.endDate = { $lte: new Date(filters.endDate) };
   }
 
-  return await jobDB.findJobsByQuery(query);
+  const jobs = await jobDB.findJobsByQuery(query);
+  const users = await userDB.getUsersByIds(jobs.map(job => job.employerId)); // Ажил олгогчдын мэдээллийг авах
+  const applications = await applicationDB.getApplicationFilteredByJobId(jobs.map(job => job._id),'open' );
+
+  const finalJobs = jobs.map(job => {
+    const employer = users.find(u => u._id.toString() === job.employerId.toString());
+    const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
+    return new viewJobDTO(job, jobApplications, employer);
+  });
+  return finalJobs;
 };
 
 // ajliin zar iig id-aar avah
@@ -118,19 +166,38 @@ const getSuitableJobsForUser = async (userId, filters) => {
     });
   }
 
+  // exclude jobs posted by the current user
+  filtered = filtered.filter(job => job.employerId.toString() !== userId.toString());
+
   // sort logic
   if (filters.sort === 'salary') {
     filtered.sort((a, b) => b.salary.amount - a.salary.amount);
   } else if (filters.sort === 'recent') {
     filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
+
   if (filters.salaryMin || filters.salaryMax) {
-    query["salary.amount"] = {};
-    if (filters.salaryMin) query["salary.amount"].$gte = +filters.salaryMin;
-    if (filters.salaryMax) query["salary.amount"].$lte = +filters.salaryMax;
+    const salaryQuery = {};
+    if (filters.salaryMin) salaryQuery.$gte = +filters.salaryMin;
+    if (filters.salaryMax) salaryQuery.$lte = +filters.salaryMax;
+    filtered = filtered.filter(job => job.salary.amount >= salaryQuery.$gte && job.salary.amount <= salaryQuery.$lte);
   }
-  return filtered.map(job => new viewJobDTO(job));
+
+  // Return the filtered jobs mapped to ViewJobDTO
+  // return filtered.map(job => new viewJobDTO(job));
+
+  const users = await userDB.getUsersByIds(filtered.map(job => job.employerId)); // Ажил олгогчдын мэдээллийг авах
+  const applications = await applicationDB.getApplicationFilteredByJobId(filtered.map(job => job._id),'open' );
+
+  const finalJobs = filtered.map(job => {
+    const employer = users.find(u => u._id.toString() === job.employerId.toString());
+    const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
+    const isApplied = jobApplications.some(app => app.userId.toString() === userId.toString());
+    return new viewJobDTO(job, jobApplications, employer, isApplied);
+  });
+  return finalJobs;
 };
+
 
 const getUserPostedJobHistory = async (userId) => {
   const jobs = await jobDB.getUserPostedJobHistory(userId); // Ажлын зарын жагсаалтыг авах
@@ -164,9 +231,62 @@ const deleteJob = async (jobId, userId, role) => {
 };
 
 const getMyPostedJobs = async (userId) => {
-  const jobs = await jobDB.getMyPostedJobs(userId); // Ажлын зарын жагсаалтыг авах
-  return jobs;
+  try {
+    console.log("User ID received:", userId); // This logs the user ID being passed
+    //const userObjectId = new mongoose.Types.ObjectId(userId); // Convert string to ObjectId
+    console.log("Converted ObjectId:", userId); // This logs the converted ObjectId
+    const jobs = await jobDB.getMyPostedJobs(userId); // Fetch jobs using the converted ObjectId
+    //const jobs = await Job.find({ employerId: userObjectId, status: { $ne: 'closed' } });
+    console.log("Jobs fetched:", jobs); // This logs the fetched jobs
+
+    return jobs;
+  } catch (error) {
+    console.error("Error in getMyPostedJobs:", error); // This will log any errors encountered
+    throw error;
+  }
 };
+
+const getSuitableWorkersByJob = async (jobId) => {
+  try {
+    const job = await jobDB.getJobById(jobId);
+    if (!job) throw new Error('Job not found');
+
+    const employees = await findEligibleUsers(job); // Find eligible users for the job
+    console.log("✅ Eligible workers found:", employees?.length || 0);
+
+    const branchType = job.branch;
+    const usersWithRating = [];
+
+    for (const user of employees) {
+      const viewUser = new viewUserDTO(user);
+
+      // ✅ Тухайн ажлын төрөлтэй тохирох үнэлгээг авах
+      let branchRating = 0;
+      const found = Array.isArray(viewUser.averageRating?.byBranch)
+        ? viewUser.averageRating.byBranch.find(
+            r => r.branchType === branchType
+          )
+        : null;
+      branchRating = found?.score || 0;
+
+      usersWithRating.push({
+        user: new UserDTO(user),
+        rating: branchRating,
+      });
+    }
+
+    // ✅ Рейтингээр бууруулж эрэмбэлэх
+    usersWithRating.sort((a, b) => b.rating - a.rating);
+
+    return usersWithRating;
+  } catch (error) {
+    console.error("Error in getSuitableWorkersByJob:", error);
+    throw error;
+  }
+};
+
+
+
 module.exports = { 
   createJob, 
   getJobList, 
@@ -176,5 +296,6 @@ module.exports = {
   getUserPostedJobHistory,
   editJob,
   deleteJob,
-  getMyPostedJobs
+  getMyPostedJobs,
+  getSuitableWorkersByJob
 };

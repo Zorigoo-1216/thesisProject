@@ -6,6 +6,7 @@ const notificationService = require('./notificationService');
 const jobProgressDTO = require('../viewModels/viewJobProgressDTO');
 const paymentDB = require('../dataAccess/paymentDB');
 const paymentService = require('../services/paymentService');
+
 const startJob = async (jobId, userId) => {
   const job = await jobDB.getJobById(jobId);
   if (!job) throw new Error('Job not found');
@@ -53,6 +54,8 @@ const getCompletionRequests = async (jobId, userId) => {
   if (job.employerId.toString() !== userId) throw new Error('Not authorized');
   return await jobProgressDB.getCompletionRequests(jobId);
 }
+
+
 
 const confirmCompletion = async (jobId, userId, jobprogressIds) => {
   const job = await jobDB.getJobById(jobId);

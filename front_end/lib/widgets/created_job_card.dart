@@ -7,9 +7,21 @@ class CreatedJobCard extends StatelessWidget {
 
   const CreatedJobCard({super.key, required this.job});
 
-  String getSalaryFormatted(Salary salary) {
-    final typeLabel = {'daily': '/ өдөр', 'hourly': '/ цаг'}[salary.type] ?? '';
-    return '${salary.amount}₮ $typeLabel';
+  final List<Map<String, dynamic>> tagActions = const [
+    {'label': 'Боломжит ажилчид', 'route': '/suitable-workers'},
+    {'label': 'Гэрээ', 'route': '/job-contract'},
+    {'label': 'Ажиллах хүсэлт', 'route': '/job-request'},
+    {'label': 'Ярилцлага', 'route': '/interview'},
+    {'label': 'Ажилчид', 'route': '/job-employees'},
+    {'label': 'Ажлын явц', 'route': '/job-progress'},
+    {'label': 'Төлбөр', 'route': '/job-payment'},
+    {'label': 'Үнэлгээ', 'route': '/rate-employee'},
+    {'label': 'Гэрээ байгуулах ажилчид', 'route': '/contract-candidates'},
+    {'label': 'Гэрээний явц', 'route': 'contract-employees'},
+  ];
+  String getSalaryFormatted(int amount, String type) {
+    final typeLabel = {'daily': '/ өдөр', 'hourly': '/ цаг'}[type] ?? '';
+    return '$amount₮ $typeLabel';
   }
 
   @override
@@ -39,11 +51,15 @@ class CreatedJobCard extends StatelessWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit, color: AppColors.iconColor),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/edit-job', arguments: job);
+                  },
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: AppColors.iconColor),
-                  onPressed: () {},
+                  onPressed: () {
+                    // TODO: show confirmation dialog
+                  },
                 ),
               ],
             ),
@@ -54,14 +70,17 @@ class CreatedJobCard extends StatelessWidget {
               '${job.startDate} - ${job.endDate}',
             ),
             _iconRow(Icons.location_on_outlined, job.location),
-            _iconRow(Icons.attach_money, getSalaryFormatted(job.salary)),
+            _iconRow(
+              Icons.attach_money,
+              getSalaryFormatted(job.salary.amount, job.salaryType),
+            ),
             const SizedBox(height: AppSpacing.sm),
 
-            /// Tags
+            /// Interactive Tags
             Wrap(
               spacing: 6,
               runSpacing: 6,
-              children: job.tags.map((tag) => _tag(context, tag)).toList(),
+              children: tagActions.map((tag) => _tag(context, tag)).toList(),
             ),
           ],
         ),
@@ -82,10 +101,10 @@ class CreatedJobCard extends StatelessWidget {
     );
   }
 
-  Widget _tag(BuildContext context, String label) {
+  Widget _tag(BuildContext context, Map<String, dynamic> tag) {
     return GestureDetector(
       onTap: () {
-        // navigation switch-case...
+        Navigator.pushNamed(context, tag['route'], arguments: job.jobId);
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -94,7 +113,7 @@ class CreatedJobCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          label,
+          tag['label'],
           style: const TextStyle(color: Colors.white, fontSize: 14),
         ),
       ),

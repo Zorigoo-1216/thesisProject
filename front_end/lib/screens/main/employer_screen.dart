@@ -1,6 +1,12 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:front_end/constant/styles.dart';
 import 'package:front_end/widgets/create_job_tab.dart';
-import '../../constant/styles.dart';
+import 'package:front_end/widgets/custom_sliver_app_bar.dart';
+import 'package:front_end/models/job_model.dart';
+import '../../constant/api.dart';
 
 class EmployerScreen extends StatefulWidget {
   const EmployerScreen({super.key});
@@ -13,135 +19,222 @@ class _EmployerScreenState extends State<EmployerScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  // Using Future<List<Job>> to fetch asynchronously
+  late Future<List<Job>> _jobs;
+
   @override
   void initState() {
-    _tabController = TabController(length: 2, vsync: this);
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _jobs =
+        fetchMyPostedJobs(); // Fetch the jobs when the screen is initialized
+  }
+
+  // Fetch jobs asynchronously from API
+  Future<List<Job>> fetchMyPostedJobs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      throw Exception('User is not authenticated');
+    }
+
+    final response = await http.get(
+      Uri.parse('${baseUrl}jobs/postedJobs'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      //print('API Response: ${response.body}');
+      final data = jsonDecode(response.body);
+      final jobsData = data['jobs'];
+      //print(jobsData);
+      //print(data);
+      // Шалгаж байна: jobs нь List эсэхийг
+      if (jobsData is List) {
+        return jobsData.map((job) => Job.fromJson(job)).toList();
+      } else {
+        throw Exception("Invalid jobs data format: ${jobsData.runtimeType}");
+      }
+    } else {
+      throw Exception(
+        'Failed to load jobs: ${response.statusCode} - ${response.body}',
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Ажлын зар"),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.deepPurple,
-          labelColor: Colors.deepPurple,
-          unselectedLabelColor: Colors.grey,
-          tabs: const [
-            Tab(text: "Үүсгэсэн ажлууд"),
-            Tab(text: "Ажлын зар үүсгэх"),
-          ],
-        ),
-        actions: const [
-          Icon(Icons.notifications_none, color: AppColors.primary),
-          SizedBox(width: AppSpacing.sm),
-          Icon(Icons.settings, color: AppColors.primary),
-          SizedBox(width: AppSpacing.sm),
-          CircleAvatar(
-            radius: 20,
-            backgroundImage: AssetImage('assets/images/profile.png'),
+      body: CustomScrollView(
+        slivers: [
+          const CustomSliverAppBar(showTabs: false, showBack: false),
+          SliverPersistentHeader(
+            pinned: true,
+            delegate: _TabBarDelegate(_tabController),
           ),
-          SizedBox(width: AppSpacing.sm),
+          SliverFillRemaining(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _CreatedJobsTab(
+                  futureJobs: _jobs,
+                ), // Pass Future to _CreatedJobsTab
+                const CreateJobTab(),
+              ],
+            ),
+          ),
         ],
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_CreatedJobsTab(), CreateJobTab()],
       ),
     );
   }
 }
 
-class _CreatedJobsTab extends StatelessWidget {
-  const _CreatedJobsTab();
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  final TabController controller;
 
-  final List<Map<String, dynamic>> jobList = const [
-    {
-      "title": "Барилгын туслах ажилтан авна",
-      "location": "БЗД, Жуков, Сансрын гүүрийн хойно",
-      "salary": "120000₮ / өдөр",
-      "date": "2025-01-01 to 2025-01-02",
-      "tags": [
-        "Боломжит ажилтан",
-        "Гэрээ",
-        "Ажиллах хүсэлт",
-        "Ярилцлага",
-        "Гэрээ байгуулах ажилчид",
-        "Ажлын явц",
-        "Ажилчид",
-        "Төлбөр",
-        "Үнэлгээ",
-      ],
-    },
-    // ... other jobs
+  _TabBarDelegate(this.controller);
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(
+      color: AppColors.white,
+      child: TabBar(
+        controller: controller,
+        indicatorColor: AppColors.primary,
+        labelColor: AppColors.primary,
+        unselectedLabelColor: Colors.grey,
+        tabs: const [
+          Tab(text: "Үүсгэсэн ажлууд"),
+          Tab(text: "Ажлын зар үүсгэх"),
+        ],
+      ),
+    );
+  }
+
+  @override
+  double get maxExtent => 48;
+  @override
+  double get minExtent => 48;
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) =>
+      false;
+}
+
+class _CreatedJobsTab extends StatelessWidget {
+  final Future<List<Job>> futureJobs;
+
+  const _CreatedJobsTab({required this.futureJobs});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Job>>(
+      future: futureJobs,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('Одоогоор зарлагдсан ажил байхгүй'));
+        } else {
+          final jobs = snapshot.data!;
+          return ListView.builder(
+            padding: const EdgeInsets.all(12),
+            itemCount: jobs.length,
+            itemBuilder: (context, index) {
+              final job = jobs[index];
+              return CreatedJobCard(
+                job: job,
+              ); // Pass the Job object to CreatedJobCard widget
+            },
+          );
+        }
+      },
+    );
+  }
+}
+
+class CreatedJobCard extends StatelessWidget {
+  final Job job;
+
+  const CreatedJobCard({super.key, required this.job});
+
+  final List<Map<String, dynamic>> tagActions = const [
+    {'label': 'Боломжит ажилчид', 'route': '/suitable-workers'},
+    {'label': 'Гэрээ', 'route': '/job-contract'},
+    {'label': 'Ажиллах хүсэлт', 'route': '/job-request'},
+    {'label': 'Ярилцлага', 'route': '/interview'},
+    {'label': 'Ажилчид', 'route': '/job-employees'},
+    {'label': 'Ажлын явц', 'route': '/job-progress'},
+    {'label': 'Төлбөр', 'route': '/job-payment'},
+    {'label': 'Үнэлгээ', 'route': '/rate-employee'},
+    {'label': 'Гэрээ байгуулах ажилчид', 'route': '/contract-candidates'},
+    {'label': 'Гэрээний явц', 'route': '/contract-employees'},
   ];
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(12),
-      itemCount: jobList.length,
-      itemBuilder: (context, index) {
-        final job = jobList[index];
-        return Card(
-          elevation: AppSpacing.cardElevation,
-          color: AppColors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.radius),
-          ),
-          margin: const EdgeInsets.symmetric(vertical: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Card(
+      elevation: AppSpacing.cardElevation,
+      margin: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radius),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                // Title Row
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        job['title'],
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                Expanded(
+                  child: Text(
+                    job.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: AppColors.iconColor),
-                      onPressed: () {},
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        color: AppColors.iconColor,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ],
+                  ),
                 ),
-
-                const SizedBox(height: 4),
-                _iconRow(Icons.calendar_month_outlined, job['date']),
-                _iconRow(Icons.location_on_outlined, job['location']),
-                _iconRow(Icons.attach_money, job['salary']),
-                const SizedBox(height: 8),
-
-                Wrap(
-                  spacing: 6,
-                  runSpacing: -6,
-                  children:
-                      job['tags']
-                          .map<Widget>((label) => _tag(context, label))
-                          .toList(),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: AppColors.iconColor),
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/edit-job', arguments: job);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete, color: AppColors.iconColor),
+                  onPressed: () {
+                    // TODO: show confirmation dialog
+                  },
                 ),
               ],
             ),
-          ),
-        );
-      },
+            const SizedBox(height: AppSpacing.xs),
+            _iconRow(
+              Icons.calendar_month_outlined,
+              '${job.startDate} - ${job.endDate}',
+            ),
+            _iconRow(Icons.location_on_outlined, job.location),
+            _iconRow(Icons.attach_money, job.salary.getSalaryFormatted()),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: tagActions.map((tag) => _tag(context, tag)).toList(),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -158,55 +251,24 @@ class _CreatedJobsTab extends StatelessWidget {
     );
   }
 
-  Widget _tag(BuildContext context, String label) {
+  Widget _tag(BuildContext context, Map<String, dynamic> tag) {
     return GestureDetector(
       onTap: () {
-        switch (label) {
-          case "Боломжит ажилтан":
-            Navigator.pushNamed(context, '/suitable-workers');
-            break;
-          case "Ажиллах хүсэлт":
-            Navigator.pushNamed(context, '/job-request');
-            break;
-          case "Ярилцлага":
-            Navigator.pushNamed(context, '/interview');
-            break;
-          case "Хүлээж буй":
-            Navigator.pushNamed(context, '/contract-candidates');
-            break;
-
-          case "Гэрээ":
-            Navigator.pushNamed(context, '/job-contract');
-            break;
-          case "Гэрээ байгуулах ажилчид":
-            Navigator.pushNamed(context, '/contract-employees');
-            break;
-
-          case "Ажлын явц":
-            Navigator.pushNamed(context, '/job-progress');
-            break;
-          case "Ажилчид":
-            Navigator.pushNamed(context, '/job-employees');
-            break;
-          case "Төлбөр":
-            Navigator.pushNamed(context, '/job-payment');
-            break;
-          case "Үнэлгээ":
-            Navigator.pushNamed(context, '/rate-employee');
-            break;
-          default:
-            break;
-        }
+        debugPrint('📦 Navigating to ${tag['route']} with jobId: ${job.jobId}');
+        Navigator.pushNamed(
+          context,
+          tag['route'], // ✅ Dynamic route
+          arguments: {'jobId': job.jobId}, // ✅ Required for target screens
+        );
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        margin: const EdgeInsets.only(top: 6, right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.tagColor,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          label,
+          tag['label'],
           style: const TextStyle(color: Colors.white, fontSize: 14),
         ),
       ),

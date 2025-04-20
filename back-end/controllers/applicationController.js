@@ -4,13 +4,20 @@ const Jobdb = require('../dataAccess/jobDB');
 // controllers/applicationController.js
 const applyToJob = async (req, res) => {
   try {
-    const userId = req.user?.id || req.body.id;
-    const { jobId } = req.body;
+    const userId = req.user?.id || req.body.userId; 
+    const { jobId } = req.body || req.body.jobId; // jobId-г req.body-оос авна
 
-    if (!userId || !jobId) {
+    console.log("📩 APPLY TO JOB - jobId:", jobId);
+    if (!userId) return res.status(400).json({ error: "User ID required" });
+    if (!jobId) return res.status(400).json({ error: "Job ID required" });
+
+    if (!userId && !jobId) {
       return res.status(400).json({ error: 'userId and jobId are required' });
     }
-
+    console.log("📥 POST /apply jobId:", jobId);
+    console.log("📥 APPLY TO JOB");
+    console.log("➡️ userId:", userId);
+    console.log("➡️ jobId:", jobId);
     const result = await applicationService.applyToJob(userId, jobId);
     res.status(200).json({ message: result });
   } catch (err) {
@@ -38,9 +45,13 @@ const cancelApplication = async (req, res) => {
 const getMyAppliedJobs = async (req, res) => {
   try {
     const userId = req.user?.id || req.body.id;
+    const jobId = req.params.id || req.body.jobId;
     if (!userId) return res.status(400).json({ error: "User ID required" });
-
+    if (!jobId) return res.status(400).json({ error: "Job ID required" });
+    console.log("📥 GET /jobs/:id/appiledUsers jobId:", jobId);
+    
     const jobs = await applicationService.getMyAppliedJobs(userId);
+    if (!jobs) return res.status(404).json({ error: "No jobs found" });
     res.status(200).json({ message: "Амжилттай", jobs });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -52,7 +63,7 @@ const getMyAllAppliedJobs = async (req, res) => {
   try {
     const userId = req.user?.id || req.body.id;
     if (!userId) return res.status(400).json({ error: "User ID required" });
-
+    
     const jobs = await applicationService.getMyAllAppliedJobs(userId);
     res.status(200).json({ message: "Амжилттай", jobs });
   } catch (err) {
@@ -63,11 +74,14 @@ const getMyAllAppliedJobs = async (req, res) => {
 // Ажилд хүсэлт илгээсэн ажилчид
 const getAppliedUsersByJob = async (req, res) => {
   try {
-    const jobId = req.params.jobId || req.body.jobId;
+    const userId = req.user?.id || req.body.id;
+    if (!userId) return res.status(400).json({ error: "User ID required" });
+    const jobId = req.params.id || req.body.jobId;
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
-
-    const employers = await applicationService.getAppliedUsersByJob(jobId);
-    res.status(200).json({ message: "Амжилттай", employers });
+    console.log("📥 /applications GET - jobId:", jobId);
+    const employees = await applicationService.getAppliedUsersByJob(jobId);
+    if (!employees) return res.status(404).json({ error: "No applicants found" });
+    res.status(200).json({ message: "Амжилттай", employees : employees || [] });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -80,7 +94,7 @@ const getInterviewsByJob = async (req, res) => {
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
 
     const interviews = await applicationService.getInterviewsByJob(jobId);
-    res.status(200).json({ message: "Амжилттай", interviews });
+    res.status(200).json({ message: "Амжилттай", interviews : interviews || [] });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -129,7 +143,7 @@ const getCandidatesByJob = async (req, res) => {
     const jobId = req.params.id || req.body.jobId;
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
     const candidates = await applicationService.getCandidatesByJob(jobId);
-    res.status(200).json({ message: "Амжилттай", candidates });
+    res.status(200).json({ message: "Амжилттай", candidates : candidates || [] });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

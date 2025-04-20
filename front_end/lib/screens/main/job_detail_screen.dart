@@ -13,10 +13,11 @@ class JobDetailScreen extends StatelessWidget {
           backgroundColor: AppColors.white,
           elevation: 0,
           toolbarHeight: 80,
-          // title: const Text(
-          //   'Сайн уу Зоригоо',
-          //   style: TextStyle(color: AppColors.text, fontSize: 20),
-          // ),
+          leading: const BackButton(color: AppColors.text),
+          title: const Text(
+            "Ажлын дэлгэрэнгүй",
+            style: TextStyle(color: AppColors.text),
+          ),
           actions: const [
             Icon(Icons.notifications_none, color: AppColors.primary),
             SizedBox(width: AppSpacing.sm),
@@ -31,7 +32,7 @@ class JobDetailScreen extends StatelessWidget {
         ),
         body: Column(
           children: [
-            // Header Section
+            // Header
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Card(
@@ -42,7 +43,7 @@ class JobDetailScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
-                      CircleAvatar(
+                      const CircleAvatar(
                         radius: 24,
                         backgroundImage: AssetImage('assets/images/user.png'),
                       ),
@@ -85,34 +86,34 @@ class JobDetailScreen extends StatelessWidget {
               ),
             ),
 
-            // TabBar
+            // Tabs
             const TabBar(
-              labelColor: Color(0xFF636AE8),
+              labelColor: AppColors.primary,
               unselectedLabelColor: Colors.black,
-              indicatorColor: Color(0xFF636AE8),
+              indicatorColor: AppColors.primary,
               tabs: [
                 Tab(text: 'Ажлын мэдээлэл'),
                 Tab(text: 'Ажил олгогч мэдээлэл'),
               ],
             ),
 
-            // Tab Views
+            // Content
             Expanded(
               child: TabBarView(children: [_jobInfoTab(), _employerInfoTab()]),
             ),
 
-            // Button
+            // Apply button
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
                   onPressed: () {
-                    // 💬 Apply action here
+                    // TODO: Apply API
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF636AE8),
+                    backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -130,47 +131,44 @@ class JobDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _jobInfoTab() {
+  static Widget _jobInfoTab() {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: const [
-          Text("Ажлын тухай", style: TextStyle(fontWeight: FontWeight.bold)),
+          Text("Ажлын тухай", style: AppTextStyles.heading),
           SizedBox(height: 8),
           Text(
             "We are looking for a talented and experienced Senior Product Designer to join our team...",
           ),
 
           SizedBox(height: 16),
-          Text(
-            "Ажлын шаардлага",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          Text("Ажлын шаардлага", style: AppTextStyles.heading),
           SizedBox(height: 8),
           Text("Цалин: 120000₮ / Өдөр\nӨдрийн 3 хоолтой\nУнааны мөнгөтэй"),
 
           SizedBox(height: 16),
-          Text("Шаардлагууд", style: TextStyle(fontWeight: FontWeight.bold)),
+          Text("Шаардлагууд", style: AppTextStyles.heading),
           SizedBox(height: 8),
           Text("""
-              - Strong design portfolio
-              - Sketch, Figma ашиглах чадвар
-              - Харилцааны өндөр соёл
-              - Хэрэглэгч төвт загварын мэдлэг
-              """),
+- Strong design portfolio
+- Sketch, Figma ашиглах чадвар
+- Харилцааны өндөр соёл
+- Хэрэглэгч төвт загварын мэдлэг
+"""),
         ],
       ),
     );
   }
 
-  Widget _employerInfoTab() {
+  static Widget _employerInfoTab() {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
           Row(
             children: [
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 32,
                 backgroundImage: AssetImage('assets/images/user.png'),
               ),
@@ -200,72 +198,69 @@ class JobDetailScreen extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-          const Text("Тухай", style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text("Тухай", style: AppTextStyles.heading),
           const SizedBox(height: 8),
           const Text("Cillum laboris sunt nostrud cillum minim amet magna..."),
 
           const SizedBox(height: 16),
-          const Text(
-            "Холбоо барих",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          const Text("Холбоо барих", style: AppTextStyles.heading),
           const SizedBox(height: 4),
           const Text("Хувь хүн"),
           const Text("+976 98451216"),
 
           const SizedBox(height: 16),
-          const Text(
-            "Сэтгэгдэл",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
+          const Text("Сэтгэгдэл", style: AppTextStyles.heading),
           const SizedBox(height: 8),
+          _commentCard(
+            "Jinny Oslin",
+            "4.5",
+            "Magna id sint irure in cillum esse nisi magna pariatur excepteur laboris.",
+          ),
+        ],
+      ),
+    );
+  }
 
-          Container(
-            padding: EdgeInsets.all(12),
-            margin: EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Row(
+  static Widget _commentCard(String name, String rating, String comment) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const CircleAvatar(
+            radius: 20,
+            backgroundImage: AssetImage('assets/images/avatar.png'),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const CircleAvatar(
-                  radius: 20,
-                  backgroundImage: AssetImage('assets/images/avatar.png'),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            "Jinny Oslin",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "4.5 ⭐",
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "$rating ⭐",
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 14,
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        "Magna id sint irure in cillum esse nisi magna pariatur excepteur laboris.",
-                        style: TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 6),
+                Text(comment, style: const TextStyle(fontSize: 13)),
               ],
             ),
           ),

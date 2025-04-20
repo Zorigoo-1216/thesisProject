@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class ContractHistoryScreen extends StatelessWidget {
   const ContractHistoryScreen({super.key});
@@ -7,37 +8,35 @@ class ContractHistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Гэрээний түүх"),
-        actions: const [
-          Icon(Icons.notifications_none),
-          SizedBox(width: 12),
-          Icon(Icons.settings),
-          SizedBox(width: 12),
+      body: CustomScrollView(
+        slivers: [
+          const CustomSliverAppBar(showTabs: false, showBack: true),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                children: [
+                  const _ProfileHeader(),
+                  const SizedBox(height: AppSpacing.lg),
+                  _contractCard(
+                    jobTitle: "Барилгын туслах",
+                    employerName: "О.Эрдэнэцогт",
+                    location: "БЗД, Жуков, Сэнгүр хотхон",
+                    salary: "120000₮/өдөр",
+                    date: "2025:12:16 - 2025:12:20",
+                  ),
+                  _contractCard(
+                    jobTitle: "Барилгын туслах",
+                    employerName: "О.Эрдэнэцогт",
+                    location: "СХД, 6-р хороо, Драгон",
+                    salary: "100000₮/өдөр",
+                    date: "2025:11:10 - 2025:11:15",
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          children: [
-            const _ProfileHeader(),
-            const SizedBox(height: AppSpacing.lg),
-            _contractCard(
-              jobTitle: "Барилгын туслах",
-              employerName: "О.Эрдэнэцогт",
-              location: "БЗД, Жуков, Сэнгүр хотхон",
-              salary: "120000₮/өдөр",
-              date: "2025:12:16 - 2025:12:20",
-            ),
-            _contractCard(
-              jobTitle: "Барилгын туслах",
-              employerName: "О.Эрдэнэцогт",
-              location: "СХД, 6-р хороо, Драгон",
-              salary: "100000₮/өдөр",
-              date: "2025:11:10 - 2025:11:15",
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class EmployeeWorkProgressScreen extends StatefulWidget {
   const EmployeeWorkProgressScreen({super.key});
@@ -30,65 +31,73 @@ class _EmployeeWorkProgressScreenState
             : "Хүлээж байна";
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Ажлын явц")),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Card(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: AppSpacing.cardElevation,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundImage: AssetImage('assets/images/avatar.png'),
-                      radius: 20,
-                    ),
-                    SizedBox(width: 8),
-                    Text("О.Эрдэнэцогт", style: AppTextStyles.heading),
-                  ],
+      body: CustomScrollView(
+        slivers: [
+          const CustomSliverAppBar(showTabs: false, showBack: true),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Card(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 8),
-                _statusBadge(status),
-                const SizedBox(height: 12),
-                const Text("Ажилласан цаг: 01:05:30"),
-                const SizedBox(height: 4),
-                const Text("Бодогдсон цалин: 154500₮"),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children:
-                      isStarted
-                          ? isFinished
-                              ? [
-                                _actionButton("Цалин харах", () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/employee-payment',
-                                  );
-                                }),
-                                _outlinedButton("Цуцлах", () {
-                                  setState(() {
-                                    isFinished = false;
-                                    isStarted = false;
-                                  });
-                                }),
-                              ]
-                              : [
-                                _actionButton("Дуусгах", finishJob),
-                                _outlinedButton("Засварлах", () {}),
-                              ]
-                          : [_actionButton("Эхлүүлэх", startJob)],
+                elevation: AppSpacing.cardElevation,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundImage: AssetImage(
+                              'assets/images/avatar.png',
+                            ),
+                            radius: 20,
+                          ),
+                          SizedBox(width: 8),
+                          Text("О.Эрдэнэцогт", style: AppTextStyles.heading),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _statusBadge(status),
+                      const SizedBox(height: 12),
+                      const Text("Ажилласан цаг: 01:05:30"),
+                      const SizedBox(height: 4),
+                      const Text("Бодогдсон цалин: 154500₮"),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children:
+                            isStarted
+                                ? isFinished
+                                    ? [
+                                      _actionButton("Цалин харах", () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/employee-payment',
+                                        );
+                                      }),
+                                      _outlinedButton("Цуцлах", () {
+                                        setState(() {
+                                          isFinished = false;
+                                          isStarted = false;
+                                        });
+                                      }),
+                                    ]
+                                    : [
+                                      _actionButton("Дуусгах", finishJob),
+                                      _outlinedButton("Засварлах", () {}),
+                                    ]
+                                : [_actionButton("Эхлүүлэх", startJob)],
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -109,7 +118,7 @@ class _EmployeeWorkProgressScreenState
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white, // text color
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
