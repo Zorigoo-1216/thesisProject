@@ -41,6 +41,8 @@ const cancelApplication = async (req, res) => {
 }
 
 }
+
+
 // хүсэлт илгээсэн ажлууд
 const getMyAppliedJobs = async (req, res) => {
   try {
@@ -80,6 +82,7 @@ const getAppliedUsersByJob = async (req, res) => {
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
     console.log("📥 /applications GET - jobId:", jobId);
     const employees = await applicationService.getAppliedUsersByJob(jobId);
+    console.log("📥 /applications GET - employees:", employees);
     if (!employees) return res.status(404).json({ error: "No applicants found" });
     res.status(200).json({ message: "Амжилттай", employees : employees || [] });
   } catch (err) {

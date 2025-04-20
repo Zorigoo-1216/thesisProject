@@ -50,7 +50,9 @@ class AppRoutes {
       }
       return JobRequestScreen(
         initialTabIndex: 0,
-        jobId: args['jobId'].toString(), // Ensure jobId is a String
+        jobId: args['jobId'].toString(),
+        hasInterview: args['hasInterview'] ?? false,
+        // Ensure jobId is a String
       );
     },
 
@@ -60,7 +62,11 @@ class AppRoutes {
         debugPrint("❌ /job-request route: invalid or missing arguments");
         return const Scaffold(body: Center(child: Text("Invalid job ID")));
       }
-      return JobRequestScreen(initialTabIndex: 1, jobId: args['jobId']);
+      return JobRequestScreen(
+        initialTabIndex: 1,
+        jobId: args['jobId'],
+        hasInterview: false,
+      );
     },
     '/interview': (context) {
       final args = ModalRoute.of(context)!.settings.arguments;
@@ -68,8 +74,13 @@ class AppRoutes {
         debugPrint("❌ /interview route: invalid or missing arguments");
         return const Scaffold(body: Center(child: Text("Invalid job ID")));
       }
-      return JobRequestScreen(initialTabIndex: 2, jobId: args['jobId']);
+      return JobRequestScreen(
+        initialTabIndex: 2,
+        jobId: args['jobId'],
+        hasInterview: args['hasInterview'] ?? false,
+      );
     },
+
     '/contract-candidates': (context) {
       final args = ModalRoute.of(context)!.settings.arguments;
       if (args is! Map<String, dynamic> || !args.containsKey('jobId')) {
@@ -78,7 +89,11 @@ class AppRoutes {
         );
         return const Scaffold(body: Center(child: Text("Invalid job ID")));
       }
-      return JobRequestScreen(initialTabIndex: 3, jobId: args['jobId']);
+      return JobRequestScreen(
+        initialTabIndex: 3,
+        jobId: args['jobId'],
+        hasInterview: args['hasInterview'] ?? false,
+      );
     },
 
     '/job-contract': (context) => const JobContractScreen(initialTabIndex: 0),

@@ -18,7 +18,8 @@ connectDB();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({ origin: '*', // Хэрвээ test бол * ашиглаж болно
+    credentials: true}));
 // Routes
 app.use('/api/auth', userRoutes);
 app.use('/api/jobs', jobRoutes);

@@ -6,6 +6,7 @@ const JobDb = require("../dataAccess/jobDB");
 const User = require('../models/User');
 const userDB = require("../dataAccess/userDB");
 const viewUserDTO = require("../viewModels/viewUserDTO");
+const mongoose = require("mongoose");
 // ajild huselt ilgeeh
 const applyToJob = async (userId, jobId) => {
   const existing = await Application.findOne({ userId, jobId });
@@ -59,51 +60,94 @@ const selectCandidatesfromInterview = async (jobId, selectedUserIds) => {
   const job = await JobDb.getJobById(jobId);
   if (!job) throw new Error("Job not found");
 
+  console.log("🔥 selectedUserIds:", selectedUserIds);
+
   const applications = await Application.find({ jobId, status: 'interview' });
 
   console.log("✅ SELECTED USERS:", selectedUserIds);
 
-  // 🛠 Статус шинэчлэхийг зөв хийж байна
-  const updates = await Promise.all(applications.map(async (app) => {
-    const isSelected = selectedUserIds.includes(app.userId.toString());
-    const status = isSelected ? 'accepted' : 'rejected';
-    return Application.findByIdAndUpdate(app._id, { status });
-  }));
+  // 🛠 Статус шинэчлэх
+  await Promise.all(
+    applications.map(async (app) => {
+      const isSelected = selectedUserIds.includes(app.userId.toString());
+      const status = isSelected ? 'accepted' : 'rejected';
+      return Application.findByIdAndUpdate(app._id, { status });
+    })
+  );
 
-  // 🟢 Сонгогдсон ажилчдыг job-д оноох
-  job.employees = selectedUserIds;
-  await job.save();
+  // 🧼 description-ыг шалгах
+  if (typeof job.description !== 'string') {
+    job.description = 'Тайлбар оруулаагүй'; // эсвэл JSON.stringify(job.description)
+  }
 
-  // 🔍 Статус шинэчлэгдсэнийг шалгах лог
+  // 🟢 Сонгогдсон ажилчдыг оноох
+  const validUserIds = selectedUserIds.filter((id) =>
+    mongoose.Types.ObjectId.isValid(id)
+  );
+  job.employees = validUserIds.map((id) => new mongoose.Types.ObjectId(id));
+
+  await job.save(); // ❗️энэ save-г description зөв болгохгүйгээр хийвэл алдаа гарна
+
+  // 🔍 Дараа нь шалгах
   const updatedApplications = await Application.find({ jobId });
-  console.log("🧪 Applications after update:", updatedApplications.map(a => ({ id: a._id, status: a.status })));
+  console.log(
+    "🧪 Applications after update:",
+    updatedApplications.map((a) => ({ id: a._id, status: a.status }))
+  );
   console.log("📋 Final employees to assign:", selectedUserIds);
 
   return "Сонгогдсон ажилчид амжилттай бүртгэгдлээ";
 };
+
 const selectCandidates = async (jobId, selectedUserIds) => {
   const job = await JobDb.getJobById(jobId);
   if (!job) throw new Error("Job not found");
 
-  const allApplications = await applicationDB.getApplciationByJobId(jobId);
-  const updates = allApplications.map(app => {
+  console.log("🔥 selectedUserIds:", selectedUserIds);
+
+  const allApplications = await applicationDB.getApplciationByJobId(
+    jobId,
+    "pending"
+  );
+
+  const updates = allApplications.map((app) => {
     const isSelected = selectedUserIds.includes(app.userId.toString());
-    const status = job.haveInterview
-      ? (isSelected ? 'interview' : 'rejected')
-      : (isSelected ? 'accepted' : 'rejected');
+    const status = job.hasInterview
+      ? isSelected
+        ? "interview"
+        : "rejected"
+      : isSelected
+        ? "accepted"
+        : "rejected";
 
     return Application.findByIdAndUpdate(app._id, { status });
   });
 
-  // Хэрвээ interview байхгүй бол шууд employees талбарт нэмнэ
-  if (!job.hasInterview) {
-    job.employees = selectedUserIds;
-    await job.save();
+  await Promise.all(updates);
+
+  // 🧼 description-ыг string болгож шалгах
+  if (typeof job.description !== "string") {
+    if (Array.isArray(job.description)) {
+      job.description = job.description.join(", ");
+    } else {
+      job.description = "Тайлбар оруулаагүй";
+    }
   }
 
-  await Promise.all(updates);
+  // ✅ hasInterview байхгүй үед шууд employee-д нэмэх
+  if (!job.hasInterview) {
+    const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
+
+    job.employees = selectedUserIds
+      .filter((id) => isValidObjectId(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    await job.save(); // ❗️save-г description зөв болсны дараа л дуудах
+  }
+
   return "Сонгогдсон ажилчид амжилттай бүртгэгдлээ";
-}
+};
+
 
 
 
@@ -112,7 +156,8 @@ const getInterviewsByJob = async (jobId) => {
   const job = await Job.findById(jobId);
   if (!job) throw new Error("Job not found");
 
-  const applications = await Application.find({ jobId });
+  //const applications = await Application.find({ jobId });
+  const applications = await applicationDB.getApplciationByJobId(jobId, "interview");
   const usersWithRating = [];
 
   for (const application of applications) {
@@ -144,7 +189,9 @@ const getAppliedUsersByJob = async (jobId) => {
   const job = await Job.findById(jobId);
   if (!job) throw new Error("Job not found");
 
-  const applications = await Application.find({ jobId });
+  //const applications = await Application.find({ jobId });
+
+  const applications = await applicationDB.getApplciationByJobId(jobId, "pending");
   console.log("applications", applications);
   const usersWithRating = [];
 
@@ -205,7 +252,8 @@ const getCandidatesByJob = async (jobId) => {
   const job = await Job.findById(jobId);
   if (!job) throw new Error("Job not found");
 
-  const applications = await Application.find({ jobId, status: "accepted" });
+  //const applications = await Application.find({ jobId, status: "accepted" });
+  const applications = await applicationDB.getApplciationByJobId(jobId, "accepted");
   const usersWithRating = [];
 
   for (const application of applications) {

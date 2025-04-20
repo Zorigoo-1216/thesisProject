@@ -118,7 +118,10 @@ class _CreateJobTabState extends State<CreateJobTab> {
     final jobData = {
       "employerId": id, // Replace with actual user ID
       "title": titleController.text,
-      "description": descriptionController.text,
+      "description":
+          descriptionController.text.trim().isEmpty
+              ? "Тайлбар оруулаагүй"
+              : descriptionController.text.trim(),
       "requirements": requirements.where((e) => e.trim().isNotEmpty).toList(),
       "location":
           "${selectedDistrict ?? ''} ${selectedKhoroo ?? ''}, ${addressController.text}",
@@ -166,6 +169,7 @@ class _CreateJobTabState extends State<CreateJobTab> {
         },
         body: jsonEncode(jobData),
       );
+      print("📤 jobData being sent: ${jsonEncode(jobData)}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(

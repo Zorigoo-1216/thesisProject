@@ -258,7 +258,10 @@ class CreatedJobCard extends StatelessWidget {
         Navigator.pushNamed(
           context,
           tag['route'], // ✅ Dynamic route
-          arguments: {'jobId': job.jobId}, // ✅ Required for target screens
+          arguments: {
+            'jobId': job.jobId,
+            'hasInterview': job.hasInterview,
+          }, // ✅ Required for target screens
         );
       },
       child: Container(

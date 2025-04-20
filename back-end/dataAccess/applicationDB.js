@@ -63,8 +63,8 @@ const getAppliedUsersByJobId = async (jobId) => {
   
 
 // application-Уудыг jobId-ээр нь олно
-const getApplciationByJobId = async (jobId) => {
-  return await Application.find({ jobId: jobId });
+const getApplciationByJobId = async (jobId, status) => {
+  return await Application.find({ jobId: jobId, status: status });
 }
 const getApplicationFilteredByJobId = async (jobId) => {
   return await Application.find({ jobId: { $in: jobId } });

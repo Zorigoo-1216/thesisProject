@@ -6,7 +6,7 @@ const jobSchema = new mongoose.Schema(
 
     // General Information
     title: { type: String, required: true },
-    description: { type: String, required: true }, // Single string for job description
+    description: { type: String }, // Single string for job description
     requirements: { type: [String], default: [] },
     location: { type: String, required: true },
 

@@ -10,7 +10,7 @@ class Job {
   final List<String> requirements;
   final String experienceLevel;
   final String status;
-  final bool haveInterview;
+  final bool hasInterview;
   final String startDate;
   final String endDate;
   final int capacity;
@@ -31,7 +31,7 @@ class Job {
     required this.requirements,
     required this.experienceLevel,
     required this.status,
-    required this.haveInterview,
+    required this.hasInterview,
     required this.startDate,
     required this.endDate,
     required this.capacity,
@@ -54,7 +54,7 @@ class Job {
       requirements: List<String>.from(json['requirements'] ?? []),
       experienceLevel: json['experienceLevel'] ?? 'none',
       status: json['status'] ?? '',
-      haveInterview: json['haveInterview'] ?? false,
+      hasInterview: json['hasInterview'] ?? false,
       startDate: json['startDate'] ?? '',
       endDate: json['endDate'] ?? '',
       capacity: json['capacity'] ?? 0,

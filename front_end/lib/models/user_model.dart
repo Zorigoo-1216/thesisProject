@@ -32,17 +32,19 @@ class UserModel {
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    final id = json['_id'] ?? 'unknown_id';
+    print("🧪 UserModel JSON: $json");
+    final rawId = json['id'] ?? json['_id'];
+    final id = rawId != null ? rawId.toString() : '';
+
     return UserModel(
       id: id,
       name:
           json['name'] ??
-          '${json['firstName'] ?? ''} ${json['lastName'] ?? ''}'
-              .trim(), // Provide default empty string
+          '${json['firstName'] ?? ''} ${json['lastName'] ?? ''}'.trim(),
       email: json['email'],
       phone: json['phone'],
       avatar: json['avatar'],
-      role: json['role'] ?? '', // Default to empty string if null
+      role: json['role'] ?? '',
       gender: json['gender'],
       isVerified: json['isVerified'] ?? false,
       lastActiveAt: json['lastActiveAt'],

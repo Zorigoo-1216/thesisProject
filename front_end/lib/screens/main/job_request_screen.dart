@@ -11,11 +11,13 @@ import '../../models/rated_user_model.dart';
 class JobRequestScreen extends StatefulWidget {
   final int initialTabIndex;
   final String jobId;
+  final bool hasInterview;
 
   const JobRequestScreen({
     super.key,
     required this.initialTabIndex,
     required this.jobId,
+    required this.hasInterview,
   });
 
   @override
@@ -29,36 +31,27 @@ class _JobRequestScreenState extends State<JobRequestScreen>
   bool isLoading = false;
 
   final Set<String> selectedUsers = {};
-
-  final List<String> tabTitles = [
-    "Боломжит ажилтан",
-    "Хүсэлтүүд",
-    "Ярилцлага",
-    "Хүлээж буй",
-  ];
-
+  late List<String> tabTitles;
   Map<String, List<UserModel>> tabData = {};
 
   @override
   void initState() {
     super.initState();
+    tabTitles = [
+      "Боломжит ажилтан",
+      "Хүсэлтүүд",
+      if (widget.hasInterview) "Ярилцлага",
+      "Хүлээж буй",
+    ];
+
     _tabController = TabController(
       length: tabTitles.length,
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
+
     debugPrint("📥 JobRequestScreen opened with jobId: ${widget.jobId}");
     fetchAllTabData();
-  }
-
-  @override
-  void didUpdateWidget(covariant JobRequestScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (widget.jobId != oldWidget.jobId ||
-        widget.initialTabIndex != oldWidget.initialTabIndex) {
-      fetchAllTabData();
-    }
   }
 
   Future<void> fetchAllTabData() async {
@@ -67,17 +60,23 @@ class _JobRequestScreenState extends State<JobRequestScreen>
     try {
       final suitable = await fetchTabData('suitable-workers');
       final applications = await fetchTabData('applications');
-      final interviews = await fetchTabData('interviews');
+      final interviews =
+          widget.hasInterview
+              ? await fetchTabData('interviews')
+              : <UserModel>[];
+
       final candidates = await fetchTabData('candidates');
 
       setState(() {
         tabData["Боломжит ажилтан"] = suitable ?? [];
         tabData["Хүсэлтүүд"] = applications ?? [];
-        tabData["Ярилцлага"] = interviews ?? [];
+        if (widget.hasInterview) {
+          tabData["Ярилцлага"] = interviews;
+        }
         tabData["Хүлээж буй"] = candidates ?? [];
       });
     } catch (e) {
-      debugPrint("Error fetching tab data: $e");
+      debugPrint("❌ Error fetching tab data: $e");
     } finally {
       setState(() => isLoading = false);
     }
@@ -89,7 +88,7 @@ class _JobRequestScreenState extends State<JobRequestScreen>
       final token = prefs.getString('token');
 
       if (token == null) {
-        debugPrint("[$endpoint] No authentication token found");
+        debugPrint("[$endpoint] No token");
         return [];
       }
 
@@ -97,122 +96,122 @@ class _JobRequestScreenState extends State<JobRequestScreen>
       final response = await http.get(
         url,
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
         },
       );
 
-      if (response.statusCode != 200) {
-        debugPrint("[$endpoint] Request failed: ${response.statusCode}");
-        return [];
-      }
+      if (response.statusCode != 200) return [];
 
-      final rawBody = response.body.trim();
-      debugPrint("[$endpoint] RAW BODY: $rawBody");
-
-      if (rawBody.isEmpty || rawBody == 'null') return [];
-
-      dynamic decoded;
-      try {
-        decoded = jsonDecode(rawBody);
-      } catch (e) {
-        debugPrint("[$endpoint] JSON decode error: $e");
-        return [];
-      }
-
-      debugPrint("[$endpoint] Decoded Type: ${decoded.runtimeType}");
-
-      if (decoded is! Map<String, dynamic>) {
-        debugPrint("[$endpoint] Unexpected JSON root (not Map): $decoded");
-        return [];
-      }
-
-      debugPrint("[$endpoint] RESPONSE BODY >>>>>>>>>>");
-      debugPrint(response.body);
-      debugPrint(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-
-      const keys = {
+      final decoded = jsonDecode(response.body);
+      final keyMap = {
         'suitable-workers': 'workers',
         'applications': 'employees',
         'interviews': 'interviews',
         'candidates': 'candidates',
       };
 
-      final key = keys[endpoint];
-      final data = decoded[key];
+      final data = decoded[keyMap[endpoint]];
       if (data is! List) return [];
-      debugPrint("[$endpoint] Raw list: $data");
-      for (final item in data) {
-        debugPrint("Item type: ${item.runtimeType}, value: $item");
-      }
-      //print(response.body);
+
       return data
           .whereType<Map<String, dynamic>>()
           .map((item) {
             try {
-              if (endpoint == 'applications') {
-                // rated user (user + rating)
-                return item.containsKey('user')
-                    ? RatedUserModel.fromJson(item).user
-                    : null;
+              if (endpoint == 'applications' && item.containsKey('user')) {
+                final rated = RatedUserModel.fromJson(item);
+                return rated.user;
               } else {
-                // direct user model (interviews, candidates)
                 return UserModel.fromJson(item);
               }
             } catch (e) {
-              debugPrint("[$endpoint] Failed to parse item: $e");
+              debugPrint("❌ $endpoint parse failed: $e");
               return null;
             }
           })
           .whereType<UserModel>()
           .toList();
     } catch (e) {
-      debugPrint("[$endpoint] Unexpected error: $e");
+      debugPrint("❌ $endpoint unexpected error: $e");
       return [];
     }
   }
 
-  String getCurrentTabName() {
-    final index = _tabController.index;
-    if (index < 0 || index >= tabTitles.length) {
-      debugPrint("Invalid tab index: $index");
-      return tabTitles.first;
-    }
-    return tabTitles[index];
-  }
+  String getCurrentTabName() => tabTitles[_tabController.index];
+  List<UserModel> getCurrentTabData() => tabData[getCurrentTabName()] ?? [];
 
-  List<UserModel> getCurrentTabData() {
-    final tabName = getCurrentTabName();
-    return tabData[tabName] ?? [];
-  }
-
-  void confirmSelection() {
-    final current = getCurrentTabName();
+  Future<void> confirmSelection() async {
+    final currentTab = getCurrentTabName(); // Жишээ: "Хүсэлтүүд", "Ярилцлага"
     final nextIndex = _tabController.index + 1;
+    final selected =
+        tabData[currentTab]!
+            .where((user) => selectedUsers.contains(user.id))
+            .toList();
 
-    if (nextIndex < tabTitles.length) {
-      final nextTab = tabTitles[nextIndex];
+    if (selected.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Ажилтан сонгоогүй байна")));
+      return;
+    }
+    print("🔥 selectedUserIds: ${selected.map((e) => e.id).toList()}");
 
-      setState(() {
-        tabData[current] = List.from(tabData[current] ?? [])
-          ..removeWhere((user) => selectedUsers.contains(user.id));
-        tabData[nextTab] = List.from(tabData[nextTab] ?? [])..addAll(
-          tabData[current]!.where((user) => selectedUsers.contains(user.id)),
-        );
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
 
-        selectedUsers.clear();
-        isSelecting = false;
-      });
+      if (token == null) throw Exception("Authentication token not found");
+
+      // ✅ Endpoint-ийг currentTab нэр дээр үндэслэн сонгоно
+      final endpoint =
+          currentTab == "Ярилцлага"
+              ? 'select-from-interview'
+              : 'select-from-application';
+      final response = await http.post(
+        Uri.parse('${baseUrl}applications/job/${widget.jobId}/$endpoint'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'selectedUserIds': selected.map((e) => e.id).toList(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        if (nextIndex < tabTitles.length) {
+          final nextTab = tabTitles[nextIndex];
+
+          setState(() {
+            tabData[currentTab]!.removeWhere(
+              (u) => selectedUsers.contains(u.id),
+            );
+            tabData[nextTab] = [...(tabData[nextTab] ?? []), ...selected];
+            selectedUsers.clear();
+            isSelecting = false;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Сонголт амжилттай бүртгэгдлээ")),
+          );
+        }
+      } else {
+        final error = jsonDecode(response.body)['error'] ?? 'Алдаа гарлаа';
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
+      }
+    } catch (e) {
+      debugPrint("❌ Confirm selection error: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Сүлжээний алдаа")));
     }
   }
 
-  Widget buildUserCard(UserModel? user) {
-    if (user == null) {
-      return SizedBox(); // Or handle null cases here
-    }
-
+  Widget buildUserCard(UserModel user) {
     return JobRequestCard(
-      user: user, // Pass non-null UserModel
+      user: user,
       showCheckbox: isSelecting,
       checked: selectedUsers.contains(user.id),
       onChanged: (val) {
@@ -231,25 +230,21 @@ class _JobRequestScreenState extends State<JobRequestScreen>
     final tabName = tabTitles[index];
     final items = tabData[tabName] ?? [];
 
-    if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (isLoading) return const Center(child: CircularProgressIndicator());
 
     if (items.isEmpty) {
+      final message = switch (tabName) {
+        "Боломжит ажилтан" => "Тохирох ажилтан олдсонгүй",
+        "Хүсэлтүүд" => "Ажиллах хүсэлт ирээгүй байна",
+        "Ярилцлага" => "Ярилцлагад уригдсан ажилтан байхгүй",
+        "Хүлээж буй" => "Батлагдсан ажилтан алга байна",
+        _ => "Мэдээлэл байхгүй",
+      };
+
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Text(
-            switch (tabName) {
-              "Боломжит ажилтан" => "Тохирох ажилтан олдсонгүй",
-              "Хүсэлтүүд" => "Ажиллах хүсэлт ирээгүй байна",
-              "Ярилцлага" => "Ярилцлагад уригдсан ажилтан байхгүй",
-              "Хүлээж буй" => "Батлагдсан ажилтан алга байна",
-              _ => "Мэдээлэл олдсонгүй",
-            },
-            style: const TextStyle(color: AppColors.text, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
+          padding: const EdgeInsets.all(24),
+          child: Text(message, textAlign: TextAlign.center),
         ),
       );
     }
@@ -259,7 +254,7 @@ class _JobRequestScreenState extends State<JobRequestScreen>
         Expanded(
           child: ListView(
             padding: const EdgeInsets.only(bottom: 100),
-            children: items.map((user) => buildUserCard(user)).toList(),
+            children: items.map(buildUserCard).toList(),
           ),
         ),
         if (tabName == "Хүсэлтүүд" || tabName == "Ярилцлага")
@@ -274,8 +269,6 @@ class _JobRequestScreenState extends State<JobRequestScreen>
                             onPressed: confirmSelection,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
-                              foregroundColor:
-                                  AppColors.white, // 👈 цагаан текст
                             ),
                             child: const Text("Батлах"),
                           ),
@@ -292,7 +285,6 @@ class _JobRequestScreenState extends State<JobRequestScreen>
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.primary,
                               side: const BorderSide(color: AppColors.primary),
-                              backgroundColor: Colors.white, // арын фон
                             ),
                             child: const Text("Буцах"),
                           ),
@@ -301,16 +293,16 @@ class _JobRequestScreenState extends State<JobRequestScreen>
                     )
                     : ElevatedButton(
                       onPressed: () {
-                        setState(() {
-                          isSelecting = true;
-                        });
+                        setState(() => isSelecting = true);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.white, // 👈 цагаан текст
                         minimumSize: const Size.fromHeight(48),
                       ),
-                      child: const Text("Сонгох"),
+                      child: const Text(
+                        "Сонгох",
+                        style: TextStyle(color: AppColors.white, fontSize: 16),
+                      ),
                     ),
           ),
       ],

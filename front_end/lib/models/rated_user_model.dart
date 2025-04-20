@@ -9,9 +9,10 @@ class RatedUserModel {
 
   factory RatedUserModel.fromJson(Map<String, dynamic> json) {
     final userData = json['user'];
+    print("🔥 RatedUserModel userData: $userData");
     if (userData is Map<String, dynamic>) {
       return RatedUserModel(
-        user: UserModel.fromJson(userData),
+        user: UserModel.fromJson(userData), // ✅ зөв object дамжуулж байна
         rating: (json['rating'] ?? 0).toDouble(),
       );
     } else {
