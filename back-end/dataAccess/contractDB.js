@@ -1,6 +1,12 @@
 const Contract = require('../models/Contracts');
 const ContractTemplate = require('../models/contractTemplate');
 const Job = require('../models/Job');
+
+
+const findTemplateByJobId = async (jobId) => {
+  return await ContractTemplate.findOne({ jobId });
+}
+
 const createContractTemplate = async (data) => {
     return await ContractTemplate.create(data);
 };
@@ -36,19 +42,35 @@ const getHistory = async (userId) => {
     $or: [{ workerSigned: true }, { rejected: true }]
   });
 };
-const getTemplateAndJob = async (templateId, employerId) => {
-    const template = await ContractTemplate.findOne({ _id: templateId, employerId });
-    if (!template) throw new Error('Template not found');
-  
-    const job = await Job.findById(template.jobId);
-    return { template, job };
-  };
+const getTemplateAndJob = async (contractTemplateId, employerId) => {
+  const template = await ContractTemplate.findOne({
+    _id: contractTemplateId,
+    employerId,
+  });
 
-const updateContractStatus  = async (id, updates) => {
-    const contract = await Contract.findById(id);
-    if (!contract) throw new Error('Contract not found');
-    return await Contract.findOneAndUpdate({ _id: id }, updates, { new: true });
-}
+  const job = template ? await Job.findById(template.jobId) : null;
+
+  return { template, job };
+};
+
+
+const updateContractStatus = async (id, updates) => {
+  console.log("✍️ Worker is signing contract:", id);
+
+  const contract = await Contract.findById(id);
+  if (!contract) throw new Error('Contract not found');
+
+  // updates object дотор байгаа талбаруудыг contract дээр нэмэх
+  Object.assign(contract, updates);
+
+  // хадгалах
+  return await contract.save();
+};
+
+
+const createContract = async (data) => {
+  return await Contract.create(data);
+};
 module.exports = {
   createContractTemplate,
   getById,
@@ -59,5 +81,6 @@ module.exports = {
   getTemplateAndJob,
   updateContractStatus,
  generateSummary,
-
+ findTemplateByJobId,
+ createContract
 };

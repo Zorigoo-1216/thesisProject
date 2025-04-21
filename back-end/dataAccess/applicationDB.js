@@ -18,13 +18,17 @@ const createApplication = async (userId, jobId ) => {
 }
 
 // Hereglegchiin huselt ilgeesen ajluudiig olno
-const getAppliedJobsByUserId = async (userId) => {
-    const applications =  await Application.find({ userId : userId , status:  { $ne: "closed" } });
+const getAppliedJobsByUserId = async (userId, status) => {
+    const applications =  await Application.find({ userId : userId , status: status});
     const jobs= [];
     for (const application of applications) {
         const job = await Job.findById(application.jobId);
         if (job) {
-          jobs.push(new viewJobDTO(job));
+          const dto = new viewJobDTO(job);
+          dto.applicationStatus = application.status; // ✅ Application-ын статусыг job DTO-д нэмж байна
+          //dto.appliedAt = application.appliedAt; // хүсвэл нэмэлтээр оруулж болно
+          jobs.push(dto);
+          //jobs.push(new viewJobDTO(job));
         }
     }
     return jobs;

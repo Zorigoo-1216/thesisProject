@@ -42,8 +42,8 @@ const notifyApplication = async (appID) => {
     return "Notification sent successfully";
 };
 // ajliin huselt ilgeesen ajluudiig avah
-const getMyAppliedJobs = async (userId) => {
-  return await applicationDB.getAppliedJobsByUserId(userId);
+const getMyAppliedJobs = async (userId, status) => {
+  return await applicationDB.getAppliedJobsByUserId(userId, status);
 }
 // ajliin huselt ilgeesen buh ajluudiig avah
 const getMyAllAppliedJobs = async (userId) => {
@@ -243,7 +243,7 @@ const getEmployeesByJob = async (jobId) => {
     return bScore - aScore;
   });
 
-  return employees.map(user => new ViewUserDTO(user));
+  return employees.map(user => new viewUserDTO(user));
 };
 
 

@@ -87,6 +87,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                   tabController: _tabController,
                   showBack: true,
                   showTabs: true,
+                  tabs: [],
                 ),
               ],
           body: TabBarView(

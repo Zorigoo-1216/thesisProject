@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:front_end/constant/api.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
 import '../../constant/styles.dart';
 import '../../widgets/custom_sliver_app_bar.dart';
 
@@ -14,13 +19,53 @@ class _EmployeeWorkProgressScreenState
     extends State<EmployeeWorkProgressScreen> {
   bool isStarted = false;
   bool isFinished = false;
+  bool isLoading = false;
+  String jobId = ''; // will get from prefs or passed args
 
-  void startJob() {
-    setState(() => isStarted = true);
+  @override
+  void initState() {
+    super.initState();
+    loadJobId();
   }
 
-  void finishJob() {
-    setState(() => isFinished = true);
+  Future<void> loadJobId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      jobId = prefs.getString('currentJobId') ?? '';
+    });
+  }
+
+  Future<void> startRequest() async {
+    setState(() => isLoading = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token') ?? '';
+      final userId = prefs.getString('userId') ?? '';
+
+      final response = await http.post(
+        Uri.parse('${baseUrl}job/$jobId/start'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({"workerId": userId}), // ⬅️ илгээж байна
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          isStarted = true;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Ажил эхэллээ')));
+      } else {
+        debugPrint('❌ Error starting job: ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('❌ Exception: $e');
+    } finally {
+      setState(() => isLoading = false);
+    }
   }
 
   @override
@@ -33,7 +78,7 @@ class _EmployeeWorkProgressScreenState
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true),
+          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -62,35 +107,41 @@ class _EmployeeWorkProgressScreenState
                       const SizedBox(height: 8),
                       _statusBadge(status),
                       const SizedBox(height: 12),
-                      const Text("Ажилласан цаг: 01:05:30"),
+                      const Text("Ажилласан цаг: -"),
                       const SizedBox(height: 4),
-                      const Text("Бодогдсон цалин: 154500₮"),
+                      const Text("Цалин: -"),
                       const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children:
-                            isStarted
-                                ? isFinished
-                                    ? [
-                                      _actionButton("Цалин харах", () {
-                                        Navigator.pushNamed(
-                                          context,
-                                          '/employee-payment',
-                                        );
-                                      }),
-                                      _outlinedButton("Цуцлах", () {
-                                        setState(() {
-                                          isFinished = false;
-                                          isStarted = false;
-                                        });
-                                      }),
-                                    ]
-                                    : [
-                                      _actionButton("Дуусгах", finishJob),
-                                      _outlinedButton("Засварлах", () {}),
-                                    ]
-                                : [_actionButton("Эхлүүлэх", startJob)],
-                      ),
+                      isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children:
+                                isStarted
+                                    ? isFinished
+                                        ? [
+                                          _actionButton("Цалин харах", () {
+                                            Navigator.pushNamed(
+                                              context,
+                                              '/employee-payment',
+                                            );
+                                          }),
+                                          _outlinedButton("Цуцлах", () {
+                                            setState(() {
+                                              isStarted = false;
+                                              isFinished = false;
+                                            });
+                                          }),
+                                        ]
+                                        : [
+                                          _actionButton("Дуусгах", () {
+                                            setState(() {
+                                              isFinished = true;
+                                            });
+                                          }),
+                                          _outlinedButton("Засварлах", () {}),
+                                        ]
+                                    : [_actionButton("Эхлүүлэх", startRequest)],
+                          ),
                     ],
                   ),
                 ),

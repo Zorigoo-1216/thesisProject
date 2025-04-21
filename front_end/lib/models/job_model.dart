@@ -18,7 +18,7 @@ class Job {
   final String employerName;
   final String postedAgo;
   final bool isApplied;
-
+  final String applicationStatus;
   Job({
     required this.jobId,
     required this.title,
@@ -39,6 +39,7 @@ class Job {
     required this.employerName,
     required this.postedAgo,
     this.isApplied = false,
+    this.applicationStatus = 'none',
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
@@ -62,6 +63,7 @@ class Job {
       employerName: json['employerName'] ?? '',
       postedAgo: json['postedAgo'] ?? '',
       isApplied: json['isApplied'] ?? false,
+      applicationStatus: json['applicationStatus'] ?? 'none',
     );
   }
 }

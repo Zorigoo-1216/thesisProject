@@ -47,18 +47,24 @@ const cancelApplication = async (req, res) => {
 const getMyAppliedJobs = async (req, res) => {
   try {
     const userId = req.user?.id || req.body.id;
-    const jobId = req.params.id || req.body.jobId;
-    if (!userId) return res.status(400).json({ error: "User ID required" });
-    if (!jobId) return res.status(400).json({ error: "Job ID required" });
-    console.log("📥 GET /jobs/:id/appiledUsers jobId:", jobId);
-    
-    const jobs = await applicationService.getMyAppliedJobs(userId);
-    if (!jobs) return res.status(404).json({ error: "No jobs found" });
-    res.status(200).json({ message: "Амжилттай", jobs });
+    const status = req.query.status || req.body.status || null;
+
+    if (!userId) {
+      return res.status(400).json({ error: "User ID required" });
+    }
+    console.log("📥 /myapplications GET - userId:", userId);
+    const jobs = await applicationService.getMyAppliedJobs(userId, status);
+    console.log("📥 /myapplications GET - jobs:", jobs);
+    return res.status(200).json({
+      message: "Амжилттай",
+      jobs: jobs || [],
+    });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('❌ getMyAppliedJobs error:', err.message);
+    return res.status(500).json({ error: "Серверийн алдаа" });
   }
 };
+
 
 // Миний бүх хүсэлт илгээсэн ажлын түүх
 const getMyAllAppliedJobs = async (req, res) => {
@@ -133,7 +139,9 @@ const getEmployeesByJob = async (req, res) => {
   try {
     const jobId = req.params.id || req.body.jobId;
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
+    console.log("📥 /get employees GET - jobId:", jobId);
     const employers = await applicationService.getEmployeesByJob(jobId);
+    console.log("📥 /get employees GET - employers:", employers);
     res.status(200).json({ message: "Амжилттай", employers });
 }
 catch (err) {

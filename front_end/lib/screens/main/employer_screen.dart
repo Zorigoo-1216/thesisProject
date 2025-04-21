@@ -71,7 +71,7 @@ class _EmployerScreenState extends State<EmployerScreen>
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: false),
+          const CustomSliverAppBar(showTabs: false, showBack: false, tabs: []),
           SliverPersistentHeader(
             pinned: true,
             delegate: _TabBarDelegate(_tabController),

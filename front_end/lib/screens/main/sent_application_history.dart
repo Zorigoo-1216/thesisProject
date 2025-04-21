@@ -10,7 +10,7 @@ class SentApplicationHistoryScreen extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showBack: true, showTabs: false),
+          const CustomSliverAppBar(showBack: true, showTabs: false, tabs: []),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),

@@ -50,6 +50,7 @@ const jobSchema = new mongoose.Schema(
 
     // Other Information
     hasInterview: { type: Boolean, default: false },
+    isTemplateCreated: { type: Boolean, default: false },
 
     // Employees and Applications References
     employees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],

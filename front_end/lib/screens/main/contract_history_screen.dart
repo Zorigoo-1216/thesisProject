@@ -10,7 +10,7 @@ class ContractHistoryScreen extends StatelessWidget {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true),
+          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),

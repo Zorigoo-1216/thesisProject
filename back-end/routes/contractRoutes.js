@@ -3,8 +3,12 @@ const router = express.Router();
 const contractController = require('../controllers/contractController');
 const authMiddleware = require('../middleware/authMiddleware');
 
+
+router.get('/by-job/:id', authMiddleware, contractController.getContractByJobId);
 // Загвар үүсгэх
 router.post('/createtemplate', authMiddleware, contractController.createContractTemplate);
+// routes/contractRoutes.js
+router.post('/generate-template', authMiddleware, contractController.generateAndReturnHTML);
 
 // Загварын хураангуй
 router.get('/template/:id/summary', authMiddleware, contractController.getContractTemplateSummary);
@@ -19,7 +23,7 @@ router.post('/template/:id/employer-sign', authMiddleware, contractController.em
 router.post('/template/:id/send', authMiddleware, contractController.sendContractToWorkers);
 
 // Гэрээ үзэх
-router.get('/:id', authMiddleware, contractController.getContractById);
+router.get('/by-job/:jobId/worker/:workerId', authMiddleware, contractController.getContractByJobAndWorker);
 
 // Гэрээний хураангуй
 router.get('/:id/summary', authMiddleware, contractController.getContractSummary);

@@ -96,16 +96,41 @@ class AppRoutes {
       );
     },
 
-    '/job-contract': (context) => const JobContractScreen(initialTabIndex: 0),
-    '/contract-employees':
-        (context) => const JobContractScreen(initialTabIndex: 1),
+    '/job-contract': (context) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is! Map<String, dynamic> || !args.containsKey('jobId')) {
+        debugPrint("❌ /job-contract route: invalid or missing arguments");
+        return const Scaffold(body: Center(child: Text("Invalid job ID")));
+      }
+      return JobContractScreen(initialTabIndex: 0, jobId: args['jobId']);
+    },
+    '/contract-employees': (context) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is! Map<String, dynamic> || !args.containsKey('jobId')) {
+        return const Scaffold(body: Center(child: Text("Invalid job ID")));
+      }
+
+      final int tabIndex = (args['initialTabIndex'] ?? 2);
+      return JobContractScreen(
+        jobId: args['jobId'],
+        initialTabIndex: tabIndex.clamp(0, 2),
+      );
+    },
+
     '/rate-employee': (context) => const RateEmployeeScreen(),
     '/job-progress': (context) => const WorkProgressScreen(initialTabIndex: 1),
     '/job-employees': (context) => const WorkProgressScreen(initialTabIndex: 0),
     '/job-payment': (context) => const WorkProgressScreen(initialTabIndex: 2),
 
     // main.dart or routes.dart
-    '/employee-contract': (context) => const EmployeeContractScreen(),
+    '/employee-contract': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is! Map || !args.containsKey('jobId')) {
+        return const Scaffold(body: Center(child: Text("Invalid job ID")));
+      }
+      return EmployeeContractScreen(jobId: args['jobId']);
+    },
+
     '/employee-progress': (context) => const EmployeeWorkProgressScreen(),
     '/employee-payment': (context) => const EmployeePaymentScreen(),
     '/employer-rate': (context) => const EmployerRateScreen(),

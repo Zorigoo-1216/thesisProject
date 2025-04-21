@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:front_end/constant/api.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
 import '../../constant/styles.dart';
 import '../../widgets/custom_sliver_app_bar.dart';
 
 class EmployeeContractScreen extends StatefulWidget {
-  const EmployeeContractScreen({super.key});
+  final String jobId;
+  const EmployeeContractScreen({super.key, required this.jobId});
 
   @override
   State<EmployeeContractScreen> createState() => _EmployeeContractScreenState();
@@ -16,40 +19,105 @@ class EmployeeContractScreen extends StatefulWidget {
 class _EmployeeContractScreenState extends State<EmployeeContractScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late final String jobId;
+  late String workerId;
+  late String token;
+  late String contractId;
+
   bool isSigned = false;
   String contractHtml = "";
   String summaryHtml = "";
   bool isLoading = true;
+  bool isProcessing = false;
 
   @override
   void initState() {
-    _tabController = TabController(length: 2, vsync: this);
-    fetchContractData();
     super.initState();
+    jobId = widget.jobId;
+    _tabController = TabController(length: 2, vsync: this);
+    getWorkerIdAndFetch();
+  }
+
+  Future<void> getWorkerIdAndFetch() async {
+    final prefs = await SharedPreferences.getInstance();
+    token = prefs.getString('token') ?? '';
+    workerId = prefs.getString('userId') ?? '';
+    if (token.isNotEmpty && workerId.isNotEmpty) {
+      await fetchContractData();
+    } else {
+      debugPrint("⚠️ Token эсвэл WorkerId байхгүй байна");
+    }
   }
 
   Future<void> fetchContractData() async {
     try {
       final response = await http.get(
-        Uri.parse('https://yourapi.com/api/contract/detail'),
-        headers: {
-          'Authorization': 'Bearer YOUR_TOKEN', // 🔐 Replace with actual token
-        },
+        Uri.parse('${baseUrl}contracts/by-job/$jobId/worker/$workerId'),
+        headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          contractHtml = data['contractHtml'] ?? "";
-          summaryHtml = data['summaryHtml'] ?? "";
-          isSigned = data['isSigned'] ?? false;
+          contractId = data['_id']; // ⬅️ Save this
+          contractHtml = data['contentHTML'] ?? "";
+          summaryHtml = data['summary'] ?? "";
+          isSigned = data['isSignedByWorker'] ?? false;
           isLoading = false;
         });
       } else {
+        debugPrint("⚠️ Contract fetch failed: ${response.statusCode}");
         setState(() => isLoading = false);
       }
     } catch (e) {
       setState(() => isLoading = false);
-      debugPrint("Error fetching contract: $e");
+      debugPrint("❌ Error fetching contract: $e");
+    }
+  }
+
+  Future<void> _signContract() async {
+    setState(() => isProcessing = true);
+    try {
+      final res = await http.put(
+        Uri.parse('${baseUrl}contracts/$contractId/worker-sign'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        setState(() {
+          isSigned = true;
+          isProcessing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Гэрээг амжилттай баталлаа.")),
+        );
+      } else {
+        debugPrint("❌ Failed to sign contract: ${res.body}");
+        setState(() => isProcessing = false);
+      }
+    } catch (e) {
+      debugPrint("❌ Error signing contract: $e");
+      setState(() => isProcessing = false);
+    }
+  }
+
+  Future<void> _rejectContract() async {
+    setState(() => isProcessing = true);
+    try {
+      final res = await http.put(
+        Uri.parse('${baseUrl}contracts/$contractId/worker-reject'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Та гэрээг татгалзлаа.")));
+      } else {
+        debugPrint("❌ Failed to reject contract: ${res.body}");
+        setState(() => isProcessing = false);
+      }
+    } catch (e) {
+      debugPrint("❌ Error rejecting contract: $e");
+      setState(() => isProcessing = false);
     }
   }
 
@@ -64,7 +132,7 @@ class _EmployeeContractScreenState extends State<EmployeeContractScreen>
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true),
+          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
           SliverFillRemaining(
             child:
                 isLoading
@@ -102,51 +170,56 @@ class _EmployeeContractScreenState extends State<EmployeeContractScreen>
                   horizontal: 20,
                   vertical: 16,
                 ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // TODO: Accept contract API
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppSpacing.radius,
+                child:
+                    isProcessing
+                        ? const Center(child: CircularProgressIndicator())
+                        : Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _signContract,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppSpacing.radius,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Батлах",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                        child: const Text(
-                          "Батлах",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () {
-                          // TODO: Reject logic
-                        },
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: const BorderSide(color: AppColors.primary),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppSpacing.radius,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _rejectContract,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  side: const BorderSide(
+                                    color: AppColors.primary,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      AppSpacing.radius,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Татгалзах",
+                                  style: TextStyle(color: AppColors.primary),
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
-                        child: const Text(
-                          "Татгалзах",
-                          style: TextStyle(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               )
               : null,
     );

@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: true, showBack: false),
+          const CustomSliverAppBar(showTabs: true, showBack: false, tabs: []),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),

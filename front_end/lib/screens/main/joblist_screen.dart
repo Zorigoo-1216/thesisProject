@@ -181,7 +181,7 @@ class _JobListScreenState extends State<JobListScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: false),
+          const CustomSliverAppBar(showTabs: false, showBack: false, tabs: []),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),

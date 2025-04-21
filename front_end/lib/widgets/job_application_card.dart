@@ -8,21 +8,50 @@ class JobApplicationCard extends StatelessWidget {
 
   Color _statusColor(String status) {
     switch (status) {
-      case "Accepted":
+      case "accepted":
         return Colors.blue;
-      case "Waiting":
+      case "waiting":
         return Colors.orange;
-      case "Rejected":
+      case "rejected":
         return Colors.red;
       default:
         return Colors.grey;
     }
   }
 
+  String _formatSalary(dynamic salary) {
+    try {
+      if (salary is String) return salary;
+      if (salary is Map<String, dynamic>) {
+        final int amount = salary['amount'] ?? 0;
+        final String type = salary['type'] ?? 'өдөр';
+        return "$amount₮/${type == 'hourly' ? 'цаг' : 'өдөр'}";
+      }
+    } catch (_) {}
+    return 'Цалингүй';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final status = job['status'] ?? 'Waiting';
-    final tags = job['tags'] as List<String>?;
+    final String status =
+        job['applicationStatus']?.toString().toLowerCase() ?? 'pending';
+
+    final List<String> tags =
+        job['tags'] is List && (job['tags'] as List).isNotEmpty
+            ? (job['tags'] as List<dynamic>).map((e) => e.toString()).toList()
+            : (status == 'accepted'
+                ? ['Гэрээ', 'Ажлын явц', 'Цалин', 'Үнэлгээ']
+                : []);
+    final String employer =
+        job['employer']?.toString() ??
+        job['employerName']?.toString() ??
+        'Ажил олгогч';
+
+    final String title = job['title']?.toString() ?? 'Ажлын нэр';
+    final String time = job['time']?.toString() ?? '';
+    final String location = job['location']?.toString() ?? 'Байршилгүй';
+    final String date = job['date']?.toString() ?? '';
+    final String salary = _formatSalary(job['salary']);
 
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -35,7 +64,7 @@ class JobApplicationCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 👤 Header
+            /// Header
             Row(
               children: [
                 const CircleAvatar(
@@ -49,10 +78,10 @@ class JobApplicationCard extends StatelessWidget {
                       style: AppTextStyles.body,
                       children: [
                         TextSpan(
-                          text: '${job['employer']}\n',
+                          text: '$employer\n',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        TextSpan(text: job['title']),
+                        TextSpan(text: title),
                       ],
                     ),
                   ),
@@ -67,7 +96,7 @@ class JobApplicationCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    status,
+                    _statusLabel(status),
                     style: TextStyle(
                       color: _statusColor(status),
                       fontWeight: FontWeight.bold,
@@ -80,17 +109,17 @@ class JobApplicationCard extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            // 🕒 Time
+            /// Time
             Row(
               children: [
                 const Icon(Icons.access_time, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(job['time'] ?? '', style: AppTextStyles.subtitle),
+                Text(time, style: AppTextStyles.subtitle),
               ],
             ),
             const SizedBox(height: 8),
 
-            // 📍 Location
+            /// Location
             Row(
               children: [
                 const Icon(
@@ -99,38 +128,33 @@ class JobApplicationCard extends StatelessWidget {
                   color: Colors.grey,
                 ),
                 const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    job['location'] ?? '',
-                    style: AppTextStyles.subtitle,
-                  ),
-                ),
+                Expanded(child: Text(location, style: AppTextStyles.subtitle)),
               ],
             ),
             const SizedBox(height: 4),
 
-            // 💰 Salary
+            /// Salary
             Row(
               children: [
                 const Icon(Icons.attach_money, size: 18, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(job['salary'] ?? '', style: AppTextStyles.subtitle),
+                Text(salary, style: AppTextStyles.subtitle),
               ],
             ),
             const SizedBox(height: 4),
 
-            // 📅 Date
+            /// Date
             Row(
               children: [
                 const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(job['date'] ?? '', style: AppTextStyles.subtitle),
+                Text(date, style: AppTextStyles.subtitle),
               ],
             ),
             const SizedBox(height: 10),
 
-            // 🏷 Tags
-            if (status == 'Accepted' && tags != null)
+            /// Tags
+            if (status == 'accepted' && tags.isNotEmpty)
               Wrap(
                 spacing: 8,
                 runSpacing: -4,
@@ -147,16 +171,32 @@ class JobApplicationCard extends StatelessWidget {
       onTap: () {
         switch (label) {
           case "Гэрээ":
-            Navigator.pushNamed(context, '/employee-contract');
+            Navigator.pushNamed(
+              context,
+              '/employee-contract',
+              arguments: {'jobId': job['jobId']},
+            );
             break;
           case "Ажлын явц":
-            Navigator.pushNamed(context, '/employee-progress');
+            Navigator.pushNamed(
+              context,
+              '/employee-progress',
+              arguments: job['jobId'],
+            );
             break;
           case "Цалин":
-            Navigator.pushNamed(context, '/employee-payment');
+            Navigator.pushNamed(
+              context,
+              '/employee-payment',
+              arguments: job['jobId'],
+            );
             break;
           case "Үнэлгээ":
-            Navigator.pushNamed(context, '/employer-rate');
+            Navigator.pushNamed(
+              context,
+              '/employer-rate',
+              arguments: job['jobId'],
+            );
             break;
           default:
             break;
@@ -170,5 +210,19 @@ class JobApplicationCard extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
+  }
+
+  String _statusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case "accepted":
+        return "Зөвшөөрсөн";
+      case "rejected":
+        return "Татгалзсан";
+      case "pending":
+      case "waiting":
+        return "Хүлээгдэж буй";
+      default:
+        return "Тодорхойгүй";
+    }
   }
 }

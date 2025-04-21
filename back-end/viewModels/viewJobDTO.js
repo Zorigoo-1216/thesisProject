@@ -12,8 +12,8 @@ class ViewJobDTO {
     this.requirements = job.requirements || [];
     this.experienceLevel = job.level || 'none';
     this.employerId = job.employerId;
-    this.status = job.status;
-    this.haveInterview = job.haveInterview || false;
+    this.applicationStatus = job.status;
+    this.hasInterview = job.hasInterview || false;
     this.createdAt = job.createdAt;
     this.updatedAt = job.updatedAt;
     
@@ -22,7 +22,7 @@ class ViewJobDTO {
     this.startDate = job.startDate;
     this.endDate = job.endDate;
     this.benefits = job.benefits || {};
-
+    this.status = job.status || null; 
     // ✅ ШИНЭЭР нэмсэн талбарууд
     this.employerName = employer?.name || 'Нэргүй';
     this.postedAgo = getTimeAgo(job.createdAt);

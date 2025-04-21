@@ -1,30 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../constant/styles.dart'; // AppColors
-//import '../screens/main/home_screen.dart'; // HomeScreen
-//import '../screens/main/notification_screen.dart'; // ← exists
+import '../constant/styles.dart';
 
 class CustomSliverAppBar extends StatelessWidget {
   final TabController? tabController;
   final bool showTabs;
   final bool showBack;
+  final List<Tab>? tabs;
 
   const CustomSliverAppBar({
     super.key,
     this.tabController,
     this.showTabs = false,
     this.showBack = true,
+    this.tabs,
   });
 
   void _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     if (context.mounted) {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        '/login',
-        (route) => false,
-      ); // Login screen
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }
 
@@ -40,7 +36,7 @@ class CustomSliverAppBar extends StatelessWidget {
               ? IconButton(
                 icon: const Icon(Icons.arrow_back, color: AppColors.text),
                 onPressed: () {
-                  Navigator.pushNamed(context, '/home');
+                  Navigator.pop(context);
                 },
               )
               : null,
@@ -54,14 +50,10 @@ class CustomSliverAppBar extends StatelessWidget {
             Navigator.pushNamed(context, '/notification');
           },
         ),
-        const SizedBox(width: 4),
         IconButton(
           icon: const Icon(Icons.settings, color: AppColors.iconColor),
-          onPressed: () {
-            // Navigator.pushNamed(context, '/settings');
-          },
+          onPressed: () {},
         ),
-        const SizedBox(width: 4),
         GestureDetector(
           onTapDown: (details) {
             showMenu(
@@ -85,9 +77,7 @@ class CustomSliverAppBar extends StatelessWidget {
                 ),
               ],
             ).then((value) {
-              if (value == 'logout') {
-                _logout(context);
-              }
+              if (value == 'logout') _logout(context);
             });
           },
           child: const CircleAvatar(
@@ -98,16 +88,15 @@ class CustomSliverAppBar extends StatelessWidget {
         const SizedBox(width: 12),
       ],
       bottom:
-          showTabs && tabController != null
+          (showTabs &&
+                  tabController != null &&
+                  tabs != null &&
+                  tabs!.isNotEmpty)
               ? TabBar(
                 controller: tabController,
                 labelColor: AppColors.primary,
                 unselectedLabelColor: Colors.grey,
-                tabs: const [
-                  Tab(text: "Үндсэн"),
-                  Tab(text: "Хуваарь"),
-                  Tab(text: "Үнэлгээ"),
-                ],
+                tabs: tabs!,
               )
               : null,
     );

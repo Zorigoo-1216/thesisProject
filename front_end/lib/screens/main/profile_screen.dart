@@ -88,6 +88,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   tabController: _tabController,
                   showTabs: true,
                   showBack: true,
+                  tabs: [],
                 ),
                 SliverToBoxAdapter(
                   child:
