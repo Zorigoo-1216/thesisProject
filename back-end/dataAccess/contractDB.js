@@ -6,7 +6,9 @@ const Job = require('../models/Job');
 const findTemplateByJobId = async (jobId) => {
   return await ContractTemplate.findOne({ jobId });
 }
-
+const findByJobAndWorker = async (jobId, workerId) => {
+  return await Contract.findOne({ jobId, workerId, status: { $in: ['pending', 'completed'] } });
+};
 const createContractTemplate = async (data) => {
     return await ContractTemplate.create(data);
 };
@@ -82,5 +84,6 @@ module.exports = {
   updateContractStatus,
  generateSummary,
  findTemplateByJobId,
- createContract
+ createContract,
+ findByJobAndWorker
 };

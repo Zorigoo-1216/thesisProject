@@ -21,7 +21,7 @@ class WorkerCard extends StatelessWidget {
       case 'working':
         return 'Ажиллаж байна';
       case 'verified':
-        return 'Баталгаажсан';
+        return 'Шалгаж байна';
       case 'completed':
         return 'Дууссан';
       case 'paiding':

@@ -5,6 +5,7 @@ const paymentDB = require('../dataAccess/paymentDB');
 const jobDB = require('../dataAccess/jobDB');
 const jobProgressService = require('../services/jobProgressService')
 const jobProgressDB = require('../dataAccess/jobProgressDB');
+const Payment = require('../models/Payment');
 const getPaymentsByJob = async (jobId, employerId) => {
   const job = await jobDB.getJobById(jobId);
   if (!job) throw new Error('Job not found');

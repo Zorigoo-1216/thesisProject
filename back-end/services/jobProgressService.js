@@ -6,46 +6,82 @@ const notificationService = require('./notificationService');
 const jobProgressDTO = require('../viewModels/viewJobProgressDTO');
 const paymentDB = require('../dataAccess/paymentDB');
 const paymentService = require('../services/paymentService');
+const contractDB = require('../dataAccess/contractDB');
 
 const startJob = async (jobId, userId) => {
   const job = await jobDB.getJobById(jobId);
   if (!job) throw new Error('Job not found');
-  employee = job.employees.filter(emp => emp.toString() == userId);
-  if (!employee) throw new Error('Not authorized');
 
-  //const notification = await notificationService.sendStartNotification(jobId, userId);
-  if(notification) console.log(notification, "notification sent successfully");
-  const progress = await jobProgressDB.createJobProgress(jobId, userId, 'pendingStart');
+  const isAuthorized = job.employees.some(emp => emp.toString() === userId.toString());
+
+  if (!isAuthorized) throw new Error('Not authorized');
+
+  // 🆕 Гэрээг шүүж олоно
+  const contract = await contractDB.findByJobAndWorker(jobId, userId);
+  if (!contract) throw new Error('Contract not found');
+
+  const progress = await jobProgressDB.createJobProgress({
+    jobId,
+    workerId: userId,
+    employerId: job.employerId,
+    contractId: contract._id,
+    status: 'pendingStart'
+  });
 
   return progress;
-
 };
 
-const getStartRequests = async (jobId, userId) => {
+
+const calculateWorkerSalary = async (jobId, workerId) => {
   const job = await jobDB.getJobById(jobId);
   if (!job) throw new Error('Job not found');
-  if (job.employerId.toString() !== userId) throw new Error('Not authorized');
+
+  const progress = await jobProgressDB.getByJobAndWorker(jobId, workerId);
+  if (!progress) throw new Error('Job progress not found');
+
+  const salaryResult = await calculateSalary(job, progress);
+
+  // calculatedSalary хадгалах (optional)
+  await jobProgressDB.updateCalculatedSalary(progress._id, salaryResult.total);
+
+  return salaryResult;
+};
+
+
+const getStartRequests = async (jobId, employerId) => {
+  const job = await jobDB.getJobById(jobId);
+  console.log("job.employer:", job.employerId.toString());
+console.log("employerId:", employerId);
+
+  if (!job || job.employerId.toString() !== employerId.toString()) {
+    throw new Error('Not authorized');
+  }
   return await jobProgressDB.getStartRequests(jobId);
 };
 
-const confirmStart = async (jobId, userId, jobprogressIds) => {
+
+const confirmStart = async (jobId, userId, jobprogressIds, startTime) => {
   const job = await jobDB.getJobById(jobId);
   if (!job) throw new Error('Job not found');
-  if (job.employerId.toString() !== userId) throw new Error('Not authorized');
+  console.log("job.employerId:", job.employerId.toString());
+  console.log("userId:", userId);
+  if (job.employerId.toString() !== userId.toString()) throw new Error('Not authorized');
 
-  return await jobProgressDB.updateJobProgress(jobprogressIds, {
-    status: 'in_progress',
-    startedAt: new Date(),
-    lastUpdatedAt: new Date()
-  });
+  const updateData = {
+    status: 'in_progress', // 👈 in_progress
+    startedAt: startTime ? new Date(startTime) : new Date(),
+    lastUpdatedAt: new Date(),
+  };
+  console.log("Updating jobprogressIds:", jobprogressIds);
+  return await jobProgressDB.updateJobProgress(jobprogressIds, updateData);
 };
 
 
 const requestCompletion = async (jobProgressId, userId) => {
   const progress = await jobProgressDB.getProgress(jobProgressId);
-  if (!progress || progress.workerId.toString() !== userId) throw new Error('Not authorized');
+  if (!progress || progress.workerId._id.toString() !== userId.toString()) throw new Error('Not authorized');
 
-  return await jobProgressDB.updateJobProgress(jobProgressId, { status: 'verified' });
+  return await jobProgressDB.updateJobProgress([jobProgressId], { status: 'verified' });
 };
 
 const getCompletionRequests = async (jobId, userId) => {
@@ -55,6 +91,24 @@ const getCompletionRequests = async (jobId, userId) => {
   return await jobProgressDB.getCompletionRequests(jobId);
 }
 
+const getMyProgress = async (jobId, workerId) => {
+  const progress = await jobProgressDB.findByJobAndWorker(jobId, workerId);
+  if (!progress) throw new Error('JobProgress not found');
+
+  const job = await jobDB.getJobById(jobId);
+  if (!job) throw new Error('Job not found');
+
+  const salary = await calculateSalary(job, progress);
+
+  return {
+    _id: progress._id,
+    jobId: progress.jobId,
+    status: progress.status,
+    startedAt: progress.startedAt,
+    endedAt: progress.endedAt,
+    salary,
+  };
+};
 
 
 const confirmCompletion = async (jobId, userId, jobprogressIds) => {
@@ -64,7 +118,7 @@ const confirmCompletion = async (jobId, userId, jobprogressIds) => {
 
   const jobProgress = await jobProgressDB.updateJobProgress(jobprogressIds, {
     status: 'completed',
-    completedAt: new Date(),
+    endedAt: new Date(),
     isFinal: true
   });
 
@@ -210,5 +264,7 @@ module.exports = {
   rejectCompletion,
   viewProgress,
   viewProgressDetails,
-  calculateSalary
+  calculateSalary,
+  calculateWorkerSalary,
+  getMyProgress
 };

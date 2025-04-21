@@ -181,7 +181,8 @@ class JobApplicationCard extends StatelessWidget {
             Navigator.pushNamed(
               context,
               '/employee-progress',
-              arguments: job['jobId'],
+              arguments:
+                  job['jobId'], // jobId-г String хэлбэрээр дамжуулж байна
             );
             break;
           case "Цалин":

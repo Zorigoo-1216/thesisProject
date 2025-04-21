@@ -118,9 +118,28 @@ class AppRoutes {
     },
 
     '/rate-employee': (context) => const RateEmployeeScreen(),
-    '/job-progress': (context) => const WorkProgressScreen(initialTabIndex: 1),
-    '/job-employees': (context) => const WorkProgressScreen(initialTabIndex: 0),
-    '/job-payment': (context) => const WorkProgressScreen(initialTabIndex: 2),
+    '/job-progress': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      if (args == null || !args.containsKey('jobId')) {
+        return const Scaffold(body: Center(child: Text("jobId байхгүй байна")));
+      }
+      return WorkProgressScreen(jobId: args['jobId'], initialTabIndex: 1);
+    },
+
+    '/job-employees': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      if (args == null || !args.containsKey('jobId')) {
+        return const Scaffold(body: Center(child: Text("jobId байхгүй байна")));
+      }
+      return WorkProgressScreen(jobId: args['jobId'], initialTabIndex: 0);
+    },
+    '/job-payment': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      if (args == null || !args.containsKey('jobId')) {
+        return const Scaffold(body: Center(child: Text("jobId байхгүй байна")));
+      }
+      return WorkProgressScreen(jobId: args['jobId'], initialTabIndex: 2);
+    },
 
     // main.dart or routes.dart
     '/employee-contract': (context) {
@@ -131,7 +150,16 @@ class AppRoutes {
       return EmployeeContractScreen(jobId: args['jobId']);
     },
 
-    '/employee-progress': (context) => const EmployeeWorkProgressScreen(),
+    '/employee-progress': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is! String) {
+        return const Scaffold(
+          body: Center(child: Text("Job ID байхгүй байна")),
+        );
+      }
+      return EmployeeWorkProgressScreen(jobId: args);
+    },
+
     '/employee-payment': (context) => const EmployeePaymentScreen(),
     '/employer-rate': (context) => const EmployerRateScreen(),
 

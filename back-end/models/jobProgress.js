@@ -7,7 +7,7 @@ const jobProgressSchema = new mongoose.Schema({
   workerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   status: {
     type: String,
-    enum: ['not_started', 'in_progress', 'completed', 'verified', 'pendingStart'],
+    enum: ['not_started', 'in_progress', 'completed', 'verified', 'pendingStart', 'closed'],
     default: 'not_started'
   },
   startedAt: Date,

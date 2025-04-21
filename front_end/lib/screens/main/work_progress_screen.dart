@@ -1,12 +1,22 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../constant/api.dart';
+import '../../constant/styles.dart';
 import '../../models/worker_model.dart';
 import '../../widgets/worker_card.dart';
-import '../../constant/styles.dart';
 import '../../widgets/custom_sliver_app_bar.dart';
 
 class WorkProgressScreen extends StatefulWidget {
+  final String jobId;
   final int initialTabIndex;
-  const WorkProgressScreen({super.key, required this.initialTabIndex});
+
+  const WorkProgressScreen({
+    super.key,
+    required this.jobId,
+    this.initialTabIndex = 0,
+  });
 
   @override
   State<WorkProgressScreen> createState() => _WorkProgressScreenState();
@@ -19,22 +29,119 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
   List<Worker> allWorkers = [];
 
   @override
+  @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _tabController.index = widget.initialTabIndex;
 
-    allWorkers = List.generate(5, (index) {
-      return Worker(
-        name: 'Worker $index',
-        phone: '9901010$index',
-        rating: 4.5,
-        projects: 12,
-        requestTime: '2024-04-15 09:00',
-        workStartTime: '2024-04-16 08:00',
-        status: 'pendingStart',
-      );
+    // ✅ Tab солигдох үед UI шинэчлэх
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging == false) {
+        fetchStartRequests();
+        setState(() {
+          selecting = false;
+        });
+      }
     });
+
+    fetchStartRequests();
+  }
+
+  Future<void> fetchStartRequests() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    final response = await http.get(
+      Uri.parse('${baseUrl}jobprogress/${widget.jobId}/start-requests'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      setState(() {
+        allWorkers = List<Worker>.from(data.map((e) => Worker.fromJson(e)));
+      });
+    } else {
+      debugPrint('❌ Error fetching start requests: ${response.body}');
+    }
+  }
+
+  Future<void> confirmAction() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    final jobId = widget.jobId;
+
+    final selectedIds =
+        allWorkers
+            .where((worker) => worker.selected)
+            .map((worker) => worker.jobprogressId)
+            .toList();
+
+    if (selectedIds.isEmpty) return;
+
+    // ✅ Ажил эхлэх хугацааг (одоо цаг) ISO string болгож илгээе
+    final now = DateTime.now().toIso8601String();
+
+    final response = await http.post(
+      Uri.parse('${baseUrl}jobprogress/$jobId/approve-start'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'jobprogressIds': selectedIds,
+        'startTime': now, // ✅ ажил эхлэх цаг
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Ажил эхлүүлэх хүсэлтүүдийг баталлаа")),
+      );
+      await fetchStartRequests(); // Дахин шинэчилнэ
+      setState(() => selecting = false);
+    } else {
+      debugPrint('❌ Батлах алдаа: ${response.body}');
+    }
+  }
+
+  Future<void> confirmCompletion() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    final jobId = widget.jobId;
+
+    final selectedIds =
+        allWorkers
+            .where((worker) => worker.selected)
+            .map((worker) => worker.jobprogressId)
+            .toList();
+
+    if (selectedIds.isEmpty) return;
+
+    final response = await http.post(
+      Uri.parse('${baseUrl}jobprogress/$jobId/approve-completion'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'jobprogressIds': selectedIds}),
+    );
+    debugPrint("📤 Илгээж байна: $selectedIds");
+    debugPrint("➡️ Endpoint: ${baseUrl}jobprogress/$jobId/approve-completion");
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Цалинг баталгаажууллаа")));
+      debugPrint('🔄 Шинэчилж байна');
+      await fetchStartRequests();
+      debugPrint('✅ Дахин ачааллаа');
+      // дахин ачааллах
+      setState(() => selecting = false);
+    } else {
+      debugPrint('❌ Цалинг батлах алдаа: ${response.body}');
+    }
   }
 
   void resetSelection() {
@@ -46,30 +153,20 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
     });
   }
 
-  List<Worker> get filtered =>
-      allWorkers.where((w) {
-        final tab = _tabController.index;
-        return tab == 0 && w.status == 'pendingStart' ||
-            tab == 1 && ['working', 'verified'].contains(w.status) ||
-            tab == 2 && ['completed', 'paiding'].contains(w.status);
-      }).toList();
+  List<Worker> get filtered {
+    final tab = _tabController.index;
 
-  void confirmAction() {
-    setState(() {
-      for (var worker in allWorkers) {
-        if (worker.selected) {
-          if (_tabController.index == 0) {
-            worker.status = 'working';
-          } else if (_tabController.index == 1) {
-            worker.status = 'completed';
-          } else if (_tabController.index == 2) {
-            worker.status = 'paiding';
-          }
-        }
-        worker.selected = false;
-      }
-      selecting = false;
-    });
+    if (tab == 0) {
+      return allWorkers.where((w) => w.status == 'pendingStart').toList();
+    } else if (tab == 1) {
+      return allWorkers
+          .where((w) => ['in_progress', 'verified'].contains(w.status))
+          .toList();
+    } else {
+      return allWorkers
+          .where((w) => ['completed', 'paiding'].contains(w.status))
+          .toList();
+    }
   }
 
   @override
@@ -87,7 +184,11 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                   tabController: _tabController,
                   showBack: true,
                   showTabs: true,
-                  tabs: [],
+                  tabs: const [
+                    Tab(text: "Хүсэлтүүд"),
+                    Tab(text: "Ажлын явц"),
+                    Tab(text: "Төлбөр"),
+                  ],
                 ),
               ],
           body: TabBarView(
@@ -106,7 +207,61 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                             children: [
                               Expanded(
                                 child: ElevatedButton(
-                                  onPressed: confirmAction,
+                                  onPressed: () {
+                                    final tab = _tabController.index;
+
+                                    final selected =
+                                        filtered
+                                            .where((w) => w.selected)
+                                            .toList();
+                                    debugPrint("✅ Батлах дарлаа");
+                                    debugPrint(
+                                      "🎯 Сонгогдсон ажилчид: ${selected.map((w) => w.name).toList()}",
+                                    );
+                                    debugPrint(
+                                      "🆔 jobprogressIds: ${selected.map((w) => w.jobprogressId).toList()}",
+                                    );
+
+                                    if (selected.isEmpty) return;
+
+                                    if (tab == 0) {
+                                      // ❗ зөвхөн pendingStart төлөвтэй ажилтнуудыг батална
+                                      final valid = selected.every(
+                                        (w) => w.status == 'pendingStart',
+                                      );
+                                      if (valid) {
+                                        confirmAction();
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "Зөвхөн хүсэлт илгээсэн ажилчдыг сонгоно уу",
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    } else if (tab == 2) {
+                                      // ❗ зөвхөн verified ажилтнуудыг completed болгоно
+                                      final valid = selected.every(
+                                        (w) => w.status == 'verified',
+                                      );
+                                      if (valid) {
+                                        confirmCompletion();
+                                      } else {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "Зөвхөн шалгагдсан ажилчдыг сонгоно уу",
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.primary,
                                   ),

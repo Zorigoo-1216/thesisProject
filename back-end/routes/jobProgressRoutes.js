@@ -8,6 +8,10 @@ router.post('/:jobId/start', authenticate, jobProgressController.startJob);
 
 // Ажил эхлүүлэх хүсэлтүүдийг ажил олгогч харах
 router.get('/:jobId/start-requests', authenticate, jobProgressController.getStartRequests);
+// GET /api/jobprogress/:jobId/salary
+router.get('/:jobId/salary', authenticate, jobProgressController.getWorkerSalary);
+
+router.get('/:jobId/my-progress', authenticate, jobProgressController.getMyProgress);
 
 // Ажил эхлүүлэхийг баталгаажуулах (ажил олгогч)
 router.post('/:jobId/approve-start', authenticate, jobProgressController.confirmJobStart);
