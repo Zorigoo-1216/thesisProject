@@ -15,6 +15,8 @@ const paymentSchema = new mongoose.Schema({
     socialInsurance: { type: Number, default: 0 },
     taxDeduction: { type: Number, default: 0 }
   },
+  jobstartedAt: {type: Date},
+  jobendedAt: {type: Date},
   paidAt: Date
 }, {
   timestamps: true

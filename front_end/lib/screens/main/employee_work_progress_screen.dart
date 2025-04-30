@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:front_end/constant/api.dart';
-import 'package:front_end/constant/styles.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../constant/api.dart';
+import '../../constant/styles.dart';
+import '../../models/worker_model.dart'; // ✅ Worker model ашиглана
 import '../../widgets/custom_sliver_app_bar.dart';
 
 class EmployeeWorkProgressScreen extends StatefulWidget {
@@ -18,22 +20,56 @@ class EmployeeWorkProgressScreen extends StatefulWidget {
 class _EmployeeWorkProgressScreenState
     extends State<EmployeeWorkProgressScreen> {
   bool isLoading = false;
-  Map<String, dynamic>? progress;
-  String status = '';
-  int? salary;
-  String workedTime = '-';
-  String displayStatus = "Хүлээж байна";
+  bool hasContract = false;
+  Worker? worker;
+  Timer? salaryTimer;
 
   @override
   void initState() {
     super.initState();
-    loadProgress();
+    checkContractExistsWorker();
+  }
+
+  @override
+  void dispose() {
+    salaryTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> checkContractExistsWorker() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+    final workerId = prefs.getString('userId');
+
+    if (token == null || workerId == null) return;
+
+    final res = await http.get(
+      Uri.parse('${baseUrl}contracts/by-job/${widget.jobId}/worker/$workerId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (res.statusCode == 404) {
+      setState(() => hasContract = false);
+    } else if (res.statusCode == 200) {
+      setState(() => hasContract = true);
+      await loadProgress();
+      startSalaryPolling();
+    }
+  }
+
+  void startSalaryPolling() {
+    salaryTimer?.cancel();
+    salaryTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => loadProgress(),
+    );
   }
 
   Future<void> loadProgress() async {
-    setState(() => isLoading = true);
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
+    final userId = prefs.getString('userId') ?? '';
+    final phone = prefs.getString('phone') ?? '';
 
     final res = await http.get(
       Uri.parse('${baseUrl}jobprogress/${widget.jobId}/my-progress'),
@@ -42,112 +78,57 @@ class _EmployeeWorkProgressScreenState
 
     if (res.statusCode == 200) {
       final data = jsonDecode(res.body);
-      final currentStatus = data['status'];
-      final totalSalary = data['salary']?['total'];
-      final startedAt = data['startedAt'];
-      final endedAt = data['endedAt'];
 
-      String duration = "-";
-      if (startedAt != null) {
-        final start = DateTime.parse(startedAt);
-        final end = endedAt != null ? DateTime.parse(endedAt) : DateTime.now();
-        final hours = end.difference(start).inMinutes / 60;
-        duration = "${hours.toStringAsFixed(1)} цаг";
+      setState(() {
+        worker = Worker.fromJson({
+          "workerId": {
+            "_id": data['workerId'] ?? '',
+            "firstName": data['firstName'] ?? '',
+            "lastName": data['lastName'] ?? '',
+            "phone": data['phone'] ?? '',
+            "rating": 4.5,
+            "projects": 0,
+          },
+          "_id": data['_id'],
+          "status": data['status'],
+          "startedAt": data['startedAt'],
+          "endedAt": data['endedAt'],
+          "createdAt": data['createdAt'],
+          "salary": data['salary'],
+        });
+      });
+
+      if (worker?.status != 'in_progress') {
+        salaryTimer?.cancel();
+      }
+    } else if (res.statusCode == 404) {
+      // ✳️ Get job info to show its title
+      final jobRes = await http.get(
+        Uri.parse('${baseUrl}jobs/${widget.jobId}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      String jobTitle = 'Ажлын нэр оруулаагүй';
+      if (jobRes.statusCode == 200) {
+        final jobData = jsonDecode(jobRes.body);
+        jobTitle = jobData['title'] ?? jobTitle;
       }
 
       setState(() {
-        progress = {
-          ...data,
-          'jobprogressId': data['_id'], // 👈 нэмэх
-        };
-        status = currentStatus;
-        salary = totalSalary;
-        workedTime = duration;
-
-        if (currentStatus == 'in_progress')
-          displayStatus = 'Ажиллаж байна';
-        else if (currentStatus == 'verified' || currentStatus == 'completed')
-          displayStatus = 'Шалгаж байна';
-        else if (currentStatus == 'pendingStart')
-          displayStatus = 'Хүлээгдэж байна';
-        else
-          displayStatus = 'Эхлээгүй';
-      });
-    }
-    setState(() => isLoading = false);
-  }
-
-  Future<void> startRequest() async {
-    setState(() => isLoading = true);
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token') ?? '';
-    final userId = prefs.getString('userId') ?? '';
-
-    final response = await http.post(
-      Uri.parse('${baseUrl}jobprogress/${widget.jobId}/start'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({"workerId": userId}),
-    );
-
-    if (response.statusCode == 200) {
-      await loadProgress();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Ажил эхэллээ')));
-    } else {
-      debugPrint('❌ Error: ${response.body}');
-    }
-    setState(() => isLoading = false);
-  }
-
-  Future<void> finishRequest() async {
-    setState(() => isLoading = true);
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      /*************  ✨ Windsurf Command ⭐  *************/
-      /// Start job progress request
-      ///
-      /// Set the job progress status to 'started' and save the worker's ID
-      /// in the job progress record.
-      ///
-      /// If the request is successful, load the progress data again and show
-      /// a snackbar with the message "Ажил эхэллээ". Otherwise, log the error
-      /// with the message "❌ Error: <error message>".
-      ///
-      /// This function is called when the user clicks the "Start" button on the
-      /// job progress screen.
-      ///
-      /// [isLoading] is set to true while the request is being processed, and
-      /// back to false when the request is finished.
-      /*******  f2577045-9cd8-46f7-b1c7-27ac1c32afc7  *******/
-      final token = prefs.getString('token') ?? '';
-      final jobProgressId = progress?['jobprogressId'];
-
-      final response = await http.post(
-        Uri.parse(
-          '${baseUrl}jobprogress/${widget.jobId}/request-completion/$jobProgressId',
-        ),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        await loadProgress();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Дуусгах хүсэлт амжилттай илгээгдлээ")),
+        worker = Worker(
+          id: userId,
+          name: jobTitle,
+          phone: phone,
+          rating: 0,
+          projects: 0,
+          requestTime: '',
+          jobprogressId: '',
+          workStartTime: '',
+          status: 'not_started',
         );
-      } else {
-        debugPrint('❌ Finish request error: ${response.body}');
-      }
-    } catch (e) {
-      debugPrint('❌ Exception during finish request: $e');
-    } finally {
-      setState(() => isLoading = false);
+      });
+    } else {
+      debugPrint('⚠️ Unexpected response loading progress: ${res.body}');
     }
   }
 
@@ -167,35 +148,7 @@ class _EmployeeWorkProgressScreenState
                 elevation: AppSpacing.cardElevation,
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage: AssetImage(
-                              'assets/images/avatar.png',
-                            ),
-                            radius: 20,
-                          ),
-                          SizedBox(width: 8),
-                          Text("Ажилтан", style: AppTextStyles.heading),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      _statusBadge(displayStatus),
-                      const SizedBox(height: 12),
-                      Text("Ажилласан цаг: $workedTime"),
-                      Text("Цалин: ${salary != null ? "$salary₮" : '-'}"),
-                      const SizedBox(height: 16),
-                      isLoading
-                          ? const Center(child: CircularProgressIndicator())
-                          : Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: _buildActionButtons(),
-                          ),
-                    ],
-                  ),
+                  child: _buildContent(),
                 ),
               ),
             ),
@@ -205,79 +158,184 @@ class _EmployeeWorkProgressScreenState
     );
   }
 
-  List<Widget> _buildActionButtons() {
-    if (progress == null || status == 'closed' || status == 'not_started') {
-      return [_actionButton("Эхлүүлэх", startRequest)];
+  Widget _buildContent() {
+    if (!hasContract) {
+      return const Center(
+        child: Text(
+          "⚠️ Гэрээ байгуулаагүй тул эхлүүлэх боломжгүй",
+          textAlign: TextAlign.center,
+        ),
+      );
     }
 
-    if (status == 'in_progress') {
-      return [
-        _actionButton("Дуусгах", finishRequest),
-        _outlinedButton("Завсарлах", () {
-          // TODO: Pause feature
-        }),
-      ];
+    if (worker == null) {
+      return const Center(child: CircularProgressIndicator());
     }
 
-    if (status == 'verified' || status == 'completed') {
-      return [
-        _actionButton("Цалин харах", () {
-          Navigator.pushNamed(
-            context,
-            '/employee-payment',
-            arguments: {"jobId": widget.jobId},
-          );
-        }),
-        _outlinedButton("Буцах", () {
-          setState(() {
-            progress = null;
-            status = '';
-            salary = null;
-            workedTime = '-';
-            displayStatus = "Хүлээж байна";
-          });
-        }),
-      ];
-    }
-
-    return [];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const CircleAvatar(
+              radius: 20,
+              backgroundImage: AssetImage('assets/images/avatar.png'),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(worker!.name, style: AppTextStyles.heading)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _statusBadge(worker!.status),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Icon(Icons.access_time, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              (worker!.workedHours != null && worker!.workedMinutes != null)
+                  ? "${worker!.workedHours} цаг ${worker!.workedMinutes} мин"
+                  : "0 цаг 0 мин", // 👈 "-" биш
+              style: AppTextStyles.body,
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            const Icon(Icons.attach_money, size: 18),
+            const SizedBox(width: 6),
+            Text(
+              worker!.salary != null ? "${worker!.salary}₮" : "0₮",
+              style: AppTextStyles.body,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _buildActionButtons(),
+      ],
+    );
   }
 
-  Widget _statusBadge(String label) {
+  Widget _buildActionButtons() {
+    if (!hasContract) {
+      return const SizedBox.shrink(); // гэрээгүй үед юу ч харуулахгүй
+    }
+    if (worker == null ||
+        worker!.status == 'not_started' ||
+        worker!.jobprogressId.isEmpty) {
+      return ElevatedButton(
+        onPressed: _showStartDialog,
+        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+        child: const Text("Ажил эхлүүлэх"),
+      );
+    }
+
+    if (worker!.status == 'in_progress') {
+      return ElevatedButton(
+        onPressed: finishRequest,
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+        child: const Text("Дуусгах"),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  Future<void> _showStartDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text("Ажил эхлүүлэх үү?"),
+            content: const Text("Та ажлаа эхлүүлэхдээ итгэлтэй байна уу?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Үгүй"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Тийм"),
+              ),
+            ],
+          ),
+    );
+
+    if (confirmed == true) {
+      await _confirmStartRequest();
+    }
+  }
+
+  Future<void> _confirmStartRequest() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    final userId = prefs.getString('userId') ?? '';
+
+    final response = await http.post(
+      Uri.parse('${baseUrl}jobprogress/${widget.jobId}/start'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({"workerId": userId}),
+    );
+
+    if (response.statusCode == 200) {
+      await loadProgress();
+      startSalaryPolling();
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ажил эхэллээ')));
+    } else {
+      debugPrint("❌ Start job failed: ${response.body}");
+    }
+  }
+
+  Future<void> finishRequest() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    final jobProgressId = worker?.jobprogressId;
+
+    final response = await http.post(
+      Uri.parse(
+        '${baseUrl}jobprogress/${widget.jobId}/request-completion/$jobProgressId',
+      ),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      salaryTimer?.cancel();
+      await loadProgress();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Дуусгах хүсэлт илгээгдлээ")),
+      );
+    } else {
+      debugPrint('❌ Finish request error: ${response.body}');
+    }
+  }
+
+  Widget _statusBadge(String status) {
+    final map = {
+      'pendingStart': 'Хүлээгдэж байна',
+      'in_progress': 'Ажиллаж байна',
+      'verified': 'Шалгаж байна',
+      'completed': 'Дууссан',
+    };
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppColors.stateBackground,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(label, style: const TextStyle(color: AppColors.primary)),
-    );
-  }
-
-  Widget _actionButton(String label, VoidCallback onTap) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: Text(
+        map[status] ?? "Төлөв тодорхойгүй",
+        style: const TextStyle(color: AppColors.primary),
       ),
-      child: Text(label),
-    );
-  }
-
-  Widget _outlinedButton(String label, VoidCallback onTap) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        side: BorderSide.none,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: Text(label),
     );
   }
 }

@@ -5,6 +5,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 
 router.get('/by-job/:id', authMiddleware, contractController.getContractByJobId);
+
+
 // Загвар үүсгэх
 router.post('/createtemplate', authMiddleware, contractController.createContractTemplate);
 // routes/contractRoutes.js

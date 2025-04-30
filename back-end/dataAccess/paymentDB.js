@@ -4,9 +4,10 @@ const createPayment = async (data) => {
   return await Payment.create(data);
 };
 
-const getPaymentByJobId = async (jobId) => {
-  return await Payment.findOne({ jobId });
+const getByJobProgressId = async (jobProgressId) => {
+  return await Payment.findOne({ jobProgressId });
 };
+
 
 const markPaymentTransferred = async (jobId) => {
   return await Payment.findOneAndUpdate(
@@ -18,6 +19,6 @@ const markPaymentTransferred = async (jobId) => {
 
 module.exports = {
   createPayment,
-  getPaymentByJobId,
+  getByJobProgressId,
   markPaymentTransferred,
 };

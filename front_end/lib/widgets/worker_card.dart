@@ -16,9 +16,11 @@ class WorkerCard extends StatelessWidget {
 
   String _statusText(String status) {
     switch (status) {
+      case 'not_started':
+        return 'Эхлээгүй Байна';
       case 'pendingStart':
         return 'Хүлээгдэж буй';
-      case 'working':
+      case 'in_progress':
         return 'Ажиллаж байна';
       case 'verified':
         return 'Шалгаж байна';
@@ -27,8 +29,15 @@ class WorkerCard extends StatelessWidget {
       case 'paiding':
         return 'Төлбөр хийгдэж байна';
       default:
-        return '';
+        return 'Тодорхойгүй';
     }
+  }
+
+  String getWorkedTime() {
+    if (worker.workedHours != null && worker.workedMinutes != null) {
+      return "${worker.workedHours}ц ${worker.workedMinutes}мин";
+    }
+    return "-";
   }
 
   @override
@@ -41,6 +50,7 @@ class WorkerCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (showCheckbox)
               Checkbox(value: worker.selected, onChanged: onChanged),
@@ -55,28 +65,59 @@ class WorkerCard extends StatelessWidget {
                 children: [
                   Text(worker.name, style: AppTextStyles.heading),
                   Text(worker.phone, style: AppTextStyles.subtitle),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   Row(
                     children: [
                       const Icon(Icons.star, size: 16, color: Colors.orange),
                       const SizedBox(width: 4),
                       Text(worker.rating.toStringAsFixed(1)),
                       const Spacer(),
-                      Text("PROJECTS", style: AppTextStyles.subtitle),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.check_box,
-                        size: 16,
-                        color: AppColors.primary,
+                      Text(
+                        "Төслүүд: ${worker.projects}",
+                        style: AppTextStyles.subtitle,
                       ),
-                      const SizedBox(width: 2),
-                      Text(worker.projects.toString()),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Text("Хүсэлт илгээсэн: ${worker.requestTime}"),
-                  Text("Ажил эхлэх: ${worker.workStartTime}"),
-                  Text("Төлөв: ${_statusText(worker.status)}"),
+                  const SizedBox(height: 8),
+                  if (worker.status == 'in_progress') ...[
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: Colors.blueGrey,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(getWorkedTime(), style: AppTextStyles.subtitle),
+                        const Spacer(),
+                        const Icon(
+                          Icons.attach_money,
+                          size: 16,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          worker.salary != null ? "${worker.salary}₮" : "-",
+                          style: AppTextStyles.subtitle,
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "Төлөв: ${_statusText(worker.status)}",
+                      style: const TextStyle(color: AppColors.primary),
+                    ),
+                  ),
                 ],
               ),
             ),

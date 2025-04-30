@@ -6,23 +6,26 @@ const mongoose = require('mongoose');
 const applicationDB = require("../dataAccess/applicationDB"); // applicationDB
 // ajliin zar uusgeh 
 const createJob = async (jobData, employerId) => {
-  const dataToSave = {
-    ...jobData,
-    employerId,
-  };
-  // Save job to database
-  const job = await jobDB.createJob(dataToSave);
+  try {
+    const dataToSave = {
+      ...jobData,
+      employerId,
+    };
 
-  // Match eligible users
-  const eligibleUsers = await findEligibleUsers(job);
-  console.log("✅ Eligible users found:", eligibleUsers?.length || 0);
+    const job = await jobDB.createJob(dataToSave);
 
-  // Notify users if applicable
-  if (Array.isArray(eligibleUsers) && eligibleUsers.length > 0) {
-    await notifyEligibleUsers(job, eligibleUsers);
+    const eligibleUsers = await findEligibleUsers(job);
+    console.log("✅ Eligible users found in jobservice:", eligibleUsers?.length || 0);
+
+    if (Array.isArray(eligibleUsers) && eligibleUsers.length > 0) {
+      await notifyEligibleUsers(job, eligibleUsers);
+    }
+
+    return { success: true, data: job };
+  } catch (error) {
+    console.error("Error creating job:", error.message);
+    return { success: false, message: error.message };
   }
-
-  return job;
 };
 
 
@@ -61,141 +64,146 @@ const notifyEligibleUsers = async (job, users) => {
 
 // ajliin jagsaaltiig default aar haruulah
 const getJobList = async (userId) => {
-  // Бүх job-уудыг авна
-  const allJobs = await jobDB.getdJoblist();
+  try {
+    const allJobs = await jobDB.getdJoblist();
+    const jobs = allJobs.filter(job => job.employerId.toString() !== userId.toString());
+    const users = await userDB.getUsersByIds(jobs.map(job => job.employerId));
+    const applications = await applicationDB.getApplicationFilteredByJobId(jobs.map(job => job._id));
 
-  // ✅ Өөрийн үүсгэсэн job-уудыг хасна
-  const jobs = allJobs.filter(job => job.employerId.toString() !== userId.toString());
+    const finalJobs = jobs.map(job => {
+      const employer = users.find(u => u._id.toString() === job.employerId.toString());
+      const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
+      const applied = jobApplications.some(app => app.userId.toString() === userId?.toString());
+      return new viewJobDTO(job, jobApplications, employer, applied);
+    });
 
-  // Ажил олгогчийн мэдээллийг авна
-  const users = await userDB.getUsersByIds(jobs.map(job => job.employerId));
-
-  // Job бүр дээрх хүсэлтүүдийг авна
-  const applications = await applicationDB.getApplicationFilteredByJobId(
-    jobs.map(job => job._id)
-  );
-
-  // ViewJobDTO үүсгэнэ
-  const finalJobs = jobs.map(job => {
-    const employer = users.find(u => u._id.toString() === job.employerId.toString());
-    const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
-
-    // Хэрэглэгч энэ ажилд өргөдөл өгсөн эсэх
-    const applied = jobApplications.some(app => app.userId.toString() === userId?.toString());
-
-    return new viewJobDTO(job, jobApplications, employer, applied);
-  });
-
-  return finalJobs;
+    return { success: true, data: finalJobs };
+  } catch (error) {
+    console.error("Error getting job list:", error.message);
+    return { success: false, message: error.message };
+  }
 };
+
 
 
 
 
 // ajliin zar filter eer haih
 const searchJobs = async (filters) => {
-  const query = {
-    endDate: { $gt: new Date() }, 
-    status: 'open'               
-  };
-  if (filters.title) {
-    query.title = { $regex: filters.title, $options: 'i' }; // ✅ FIXED
-  }
-  if (filters.branchType) {
-    query.branchType = filters.branchType;
-  }
-  if (filters.location) {
-    query.location = filters.location;
-  }
-  if (filters.jobType) {
-    query.jobType = filters.jobType;
-  }
-  if (filters.possibleForDisabled !== undefined) {
-    query.possibleForDisabled = filters.possibleForDisabled;
-  }
-  if (filters.salaryMin || filters.salaryMax) {
-    query["salary.amount"] = {};
-    if (filters.salaryMin) {
-      query["salary.amount"].$gte = filters.salaryMin;
-    }
-    if (filters.salaryMax) {
-      query["salary.amount"].$lte = filters.salaryMax;
-    }
-  }
-  if (filters.startDate && filters.endDate) {
-    query.startDate = { $gte: new Date(filters.startDate) };
-    query.endDate = { $lte: new Date(filters.endDate) };
-  }
+  try {
+    const query = {
+      endDate: { $gt: new Date() },
+      status: 'open',
+    };
 
-  const jobs = await jobDB.findJobsByQuery(query);
-  const users = await userDB.getUsersByIds(jobs.map(job => job.employerId)); // Ажил олгогчдын мэдээллийг авах
-  const applications = await applicationDB.getApplicationFilteredByJobId(jobs.map(job => job._id),'open' );
+    if (filters.title) {
+      query.title = { $regex: filters.title, $options: 'i' };
+    }
+    if (filters.branchType) {
+      query.branchType = filters.branchType;
+    }
+    if (filters.location) {
+      query.location = filters.location;
+    }
+    if (filters.jobType) {
+      query.jobType = filters.jobType;
+    }
+    if (filters.possibleForDisabled !== undefined) {
+      query.possibleForDisabled = filters.possibleForDisabled;
+    }
+    if (filters.salaryMin || filters.salaryMax) {
+      query["salary.amount"] = {};
+      if (filters.salaryMin) {
+        query["salary.amount"].$gte = filters.salaryMin;
+      }
+      if (filters.salaryMax) {
+        query["salary.amount"].$lte = filters.salaryMax;
+      }
+    }
+    if (filters.startDate && filters.endDate) {
+      query.startDate = { $gte: new Date(filters.startDate) };
+      query.endDate = { $lte: new Date(filters.endDate) };
+    }
 
-  const finalJobs = jobs.map(job => {
-    const employer = users.find(u => u._id.toString() === job.employerId.toString());
-    const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
-    return new viewJobDTO(job, jobApplications, employer);
-  });
-  return finalJobs;
+    const jobs = await jobDB.findJobsByQuery(query);
+    const users = await userDB.getUsersByIds(jobs.map(job => job.employerId));
+    const applications = await applicationDB.getApplicationFilteredByJobId(jobs.map(job => job._id), 'open');
+
+    const finalJobs = jobs.map(job => {
+      const employer = users.find(u => u._id.toString() === job.employerId.toString());
+      const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
+      return new viewJobDTO(job, jobApplications, employer);
+    });
+
+    return { success: true, data: finalJobs };
+  } catch (error) {
+    console.error("Error searching jobs:", error.message);
+    return { success: false, message: error.message };
+  }
 };
 
 // ajliin zar iig id-aar avah
 const getJobById = async (jobId) => {
-  const job = await jobDB.getJobById(jobId);
-  if (!job) {
-    throw new Error('Job not found');
+  try {
+    const job = await jobDB.getJobById(jobId);
+    if (!job) {
+      return { success: false, message: "Job not found" };
+    }
+    return { success: true, data: job };
+  } catch (error) {
+    console.error("Error getting job by ID:", error.message);
+    return { success: false, message: error.message };
   }
-  return job;
 };
-
 const getSuitableJobsForUser = async (userId, filters) => {
-  const user = await userDB.getUserById(userId);
-  if (!user.profile || !user.profile.skills || user.profile.skills.length === 0) {
-    return []; // instead of throwing
-  }
-  const jobs = await jobDB.getJobLisForUser(user, filters);
+  try {
+    const user = await userDB.getUserById(userId);
+    if (!user.profile || !user.profile.skills || user.profile.skills.length === 0) {
+      return { success: true, data: [] };
+    }
 
-  let filtered = jobs;
+    const jobs = await jobDB.getJobLisForUser(user, filters);
 
-  // filter by time availability
-  if (user.schedule && user.schedule.length > 0) {
-    filtered = filtered.filter(job => {
-      return !user.schedule.some(s =>
-        (s.startDate <= job.endDate && s.endDate >= job.startDate)
-      );
+    let filtered = jobs;
+
+    if (user.schedule && user.schedule.length > 0) {
+      filtered = filtered.filter(job => {
+        return !user.schedule.some(s =>
+          (s.startDate <= job.endDate && s.endDate >= job.startDate)
+        );
+      });
+    }
+
+    filtered = filtered.filter(job => job.employerId.toString() !== userId.toString());
+
+    if (filters.sort === 'salary') {
+      filtered.sort((a, b) => b.salary.amount - a.salary.amount);
+    } else if (filters.sort === 'recent') {
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    if (filters.salaryMin || filters.salaryMax) {
+      const salaryQuery = {};
+      if (filters.salaryMin) salaryQuery.$gte = +filters.salaryMin;
+      if (filters.salaryMax) salaryQuery.$lte = +filters.salaryMax;
+      filtered = filtered.filter(job => job.salary.amount >= salaryQuery.$gte && job.salary.amount <= salaryQuery.$lte);
+    }
+
+    const users = await userDB.getUsersByIds(filtered.map(job => job.employerId));
+    const applications = await applicationDB.getApplicationFilteredByJobId(filtered.map(job => job._id), 'open');
+
+    const finalJobs = filtered.map(job => {
+      const employer = users.find(u => u._id.toString() === job.employerId.toString());
+      const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
+      const isApplied = jobApplications.some(app => app.userId.toString() === userId.toString());
+      return new viewJobDTO(job, jobApplications, employer, isApplied);
     });
+
+    return { success: true, data: finalJobs };
+  } catch (error) {
+    console.error("Error getting suitable jobs for user:", error.message);
+    return { success: false, message: error.message };
   }
-
-  // exclude jobs posted by the current user
-  filtered = filtered.filter(job => job.employerId.toString() !== userId.toString());
-
-  // sort logic
-  if (filters.sort === 'salary') {
-    filtered.sort((a, b) => b.salary.amount - a.salary.amount);
-  } else if (filters.sort === 'recent') {
-    filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }
-
-  if (filters.salaryMin || filters.salaryMax) {
-    const salaryQuery = {};
-    if (filters.salaryMin) salaryQuery.$gte = +filters.salaryMin;
-    if (filters.salaryMax) salaryQuery.$lte = +filters.salaryMax;
-    filtered = filtered.filter(job => job.salary.amount >= salaryQuery.$gte && job.salary.amount <= salaryQuery.$lte);
-  }
-
-  // Return the filtered jobs mapped to ViewJobDTO
-  // return filtered.map(job => new viewJobDTO(job));
-
-  const users = await userDB.getUsersByIds(filtered.map(job => job.employerId)); // Ажил олгогчдын мэдээллийг авах
-  const applications = await applicationDB.getApplicationFilteredByJobId(filtered.map(job => job._id),'open' );
-
-  const finalJobs = filtered.map(job => {
-    const employer = users.find(u => u._id.toString() === job.employerId.toString());
-    const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
-    const isApplied = jobApplications.some(app => app.userId.toString() === userId.toString());
-    return new viewJobDTO(job, jobApplications, employer, isApplied);
-  });
-  return finalJobs;
 };
 
 
@@ -205,39 +213,48 @@ const getUserPostedJobHistory = async (userId) => {
 };
 
 const editJob = async (jobId, updates, userId, role) => {
-  const job = await jobDB.getJobById(jobId);
-  if (!job) throw new Error('Job not found');
+  try {
+    const job = await jobDB.getJobById(jobId);
+    if (!job) return { success: false, message: "Job not found" };
 
-  // зөвхөн өөрийн ажил болон admin бол засах эрхтэй
-  if (job.employerId.toString() !== userId && role !== 'admin') {
-    throw new Error('Permission denied');
+    if (job.employerId.toString() !== userId && role !== 'admin') {
+      return { success: false, message: "Permission denied" };
+    }
+
+    updates.updatedAt = new Date();
+    const updatedJob = await jobDB.updateJob(jobId, updates);
+    return { success: true, data: updatedJob };
+  } catch (error) {
+    console.error("Error editing job:", error.message);
+    return { success: false, message: error.message };
   }
-
-  updates.updatedAt = new Date();
-  const updatedJob = await jobDB.updateJob(jobId, updates);
-  return updatedJob;
 };
 
 const deleteJob = async (jobId, userId, role) => {
-  const job = await jobDB.getJobById(jobId);
-  if (!job) throw new Error('Job not found');
+  try {
+    const job = await jobDB.getJobById(jobId);
+    if (!job) return { success: false, message: "Job not found" };
 
-  // зөвхөн өөрийн ажил болон admin бол устгах эрхтэй
-  if (job.employerId.toString() !== userId && role !== 'admin') {
-    throw new Error('Permission denied');
+    if (job.employerId.toString() !== userId && role !== 'admin') {
+      return { success: false, message: "Permission denied" };
+    }
+
+    await jobDB.deleteJob(jobId);
+    return { success: true, message: "Job deleted successfully" };
+  } catch (error) {
+    console.error("Error deleting job:", error.message);
+    return { success: false, message: error.message };
   }
-
-  return await jobDB.deleteJob(jobId);
 };
 
 const getMyPostedJobs = async (userId) => {
   try {
-    console.log("User ID received:", userId); // This logs the user ID being passed
+    //console.log("User ID received:", userId); // This logs the user ID being passed
     //const userObjectId = new mongoose.Types.ObjectId(userId); // Convert string to ObjectId
-    console.log("Converted ObjectId:", userId); // This logs the converted ObjectId
+   // console.log("Converted ObjectId:", userId); // This logs the converted ObjectId
     const jobs = await jobDB.getMyPostedJobs(userId); // Fetch jobs using the converted ObjectId
     //const jobs = await Job.find({ employerId: userObjectId, status: { $ne: 'closed' } });
-    console.log("Jobs fetched:", jobs); // This logs the fetched jobs
+   // console.log("Jobs fetched:", jobs); // This logs the fetched jobs
 
     return jobs;
   } catch (error) {
@@ -252,7 +269,7 @@ const getSuitableWorkersByJob = async (jobId) => {
     if (!job) throw new Error('Job not found');
 
     const employees = await findEligibleUsers(job); // Find eligible users for the job
-    console.log("✅ Eligible workers found:", employees?.length || 0);
+    console.log("✅ Eligible workers found in jobservice:", employees?.length || 0);
 
     const branchType = job.branch;
     const usersWithRating = [];

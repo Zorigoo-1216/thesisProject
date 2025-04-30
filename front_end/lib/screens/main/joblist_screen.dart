@@ -32,6 +32,13 @@ class _JobListScreenState extends State<JobListScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh the job list when entering the screen
+    _fetchAllJobs();
+  }
+
+  @override
   void dispose() {
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
@@ -76,6 +83,7 @@ class _JobListScreenState extends State<JobListScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print("Fetched jobs: ${data['jobs']}");
         final List jobs = data['jobs'] ?? [];
         setState(() {
           jobList = jobs.map((json) => Job.fromJson(json)).toList();

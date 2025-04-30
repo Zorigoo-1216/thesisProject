@@ -8,57 +8,73 @@ const jwt = require('jsonwebtoken');
 // ------------------------------Login and Register----------------------------------
 
 const registerUser = async ({ firstName, lastName, phone, password, role, gender }) => {
-  if (!firstName || !lastName || !phone || !password || !role || !gender) {
-    throw new Error('Бүх талбарыг бөглөнө үү');
+  try {
+    if (!firstName || !lastName || !phone || !password || !role || !gender) {
+      return { success: false, message: 'Бүх талбарыг бөглөнө үү' };
+    }
+
+    const existsByPhone = await userDB.checkUserbyPhoneNumber(phone);
+    if (existsByPhone) {
+      return { success: false, message: 'User already exists' };
+    }
+
+    const passwordHash = await hashPassword(password);
+    const registeredUser = await userDB.createUser({ firstName, lastName, phone, role, gender, passwordHash });
+
+    const token = generateToken(registeredUser._id);
+    return { success: true, message: 'Амжилттай бүртгэгдлээ', token, user: new viewUserDTO(registeredUser) };
+  } catch (error) {
+    console.error('Error registering user:', error.message);
+    return { success: false, message: error.message };
   }
-
-  const existsByPhone = await userDB.checkUserbyPhoneNumber(phone);
-  if (existsByPhone) {
-    throw new Error('User already exists');
-  }
-
-  const passwordHash = await hashPassword(password);
-  const registeredUser = await userDB.createUser({ firstName, lastName, phone, role, gender, passwordHash });
-
-  const token = generateToken(registeredUser._id);
-  return { message: 'Амжилттай бүртгэгдлээ', token, user: new viewUserDTO(registeredUser) };
 };
 
 const loginByEmail = async (email, password) => {
-  const user = await userDB.getUserByEmailFull(email); // шинэ функц, доор нэмнэ
-  if (!user) {
-    throw new Error('Хэрэглэгч олдсонгүй');
-  }
-  const isMatch = await bcrypt.compare(password, user.passwordHash);
-  if (!isMatch) {
-    throw new Error('Нууц үг буруу байна');
-  }
+  try {
+    const user = await userDB.getUserByEmailFull(email);
+    if (!user) {
+      return { success: false, message: 'Хэрэглэгч олдсонгүй' };
+    }
 
-  user.lastActiveAt = new Date();
-  await user.save();
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return { success: false, message: 'Нууц үг буруу байна' };
+    }
 
-  const token = generateToken(user._id);
-  return { message: 'Амжилттай нэвтэрлээ', token, user: new viewUserDTO(user) };
+    user.lastActiveAt = new Date();
+    await user.save();
+
+    const token = generateToken(user._id);
+    return { success: true, message: 'Амжилттай нэвтэрлээ', token, user: new viewUserDTO(user) };
+  } catch (error) {
+    console.error('Error logging in by email:', error.message);
+    return { success: false, message: error.message };
+  }
 };
+
 
 const loginByPhone = async (phone, password) => {
-  const user = await userDB.getUserByPhoneFull(phone); // шинэ функц, доор нэмнэ
-  if (!user) {
-    throw new Error('Хэрэглэгч олдсонгүй');
-  }
-  const isMatch = await bcrypt.compare(password, user.passwordHash);
-  if (!isMatch) {
-    throw new Error('Нууц үг буруу байна');
-  }
+  try {
+    const user = await userDB.getUserByPhoneFull(phone);
+    if (!user) {
+      return { success: false, message: 'Хэрэглэгч олдсонгүй' };
+    }
 
-  user.lastActiveAt = new Date();
-  await user.save();
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return { success: false, message: 'Нууц үг буруу байна' };
+    }
 
-  const token = generateToken(user._id);
-  return { message: 'Амжилттай нэвтэрлээ', token, user: new viewUserDTO(user) };
+    user.lastActiveAt = new Date();
+    await user.save();
+
+    const token = generateToken(user._id);
+    return { success: true, message: 'Амжилттай нэвтэрлээ', token, user: new viewUserDTO(user) };
+  } catch (error) {
+    console.error('Error logging in by phone:', error.message);
+    return { success: false, message: error.message };
+  }
 };
-
-
 // Hash Password
 const hashPassword = async (password) => {
   const salt = await bcrypt.genSalt(10);
@@ -69,35 +85,65 @@ const hashPassword = async (password) => {
 
 
 const getProfile = async (userId) => {
-  const user = await userDB.getProfileById(userId);
-  if (!user) throw new Error('Хэрэглэгч олдсонгүй');
-  return user;
+  try {
+    const user = await userDB.getProfileById(userId);
+    if (!user) return { success: false, message: 'Хэрэглэгч олдсонгүй' };
+    return { success: true, data: user };
+  } catch (error) {
+    console.error('Error getting profile:', error.message);
+    return { success: false, message: error.message };
+  }
 };
 
 const getUserByPhone = async (phone) => {
-  const user = await userDB.getUserByPhone(phone); // энэ нь viewUserDTO буцаадаг
-  return user;
+  try {
+    const user = await userDB.getUserByPhone(phone);
+    return { success: true, data: user };
+  } catch (error) {
+    console.error('Error getting user by phone:', error.message);
+    return { success: false, message: error.message };
+  }
 };
 
+
 const updateProfile = async (userId, profileUpdates) => {
-  if (!userId) throw new Error("User ID is required");
-  const updatedUser =  await userDB.updateUserFields(userId, profileUpdates);
-  return updatedUser
+  try {
+    if (!userId) return { success: false, message: 'User ID is required' };
+    const updatedUser = await userDB.updateUserFields(userId, profileUpdates);
+    return { success: true, data: updatedUser };
+  } catch (error) {
+    console.error('Error updating profile:', error.message);
+    return { success: false, message: error.message };
+  }
 };
 
 
 const verifyUser = async (userId) => {
-  var verifiedUser = await userDB.verifyUser(userId);
-  return verifiedUser;
+  try {
+    const verifiedUser = await userDB.verifyUser(userId);
+    return { success: true, data: verifiedUser };
+  } catch (error) {
+    console.error('Error verifying user:', error.message);
+    return { success: false, message: error.message };
+  }
 };
 
 
+
 const deleteUser = async (userId) => {
-  if (!userId) throw new Error("User ID is required");
-  const deletedUser = await userDB.deleteUser(userId);
-  if(deletedUser.state == 'Inactive') return "successfully deleted";
-  else throw new Error("User not found or already deleted");
-}
+  try {
+    if (!userId) return { success: false, message: 'User ID is required' };
+    const deletedUser = await userDB.deleteUser(userId);
+    if (deletedUser.state === 'Inactive') {
+      return { success: true, message: 'Successfully deleted' };
+    } else {
+      return { success: false, message: 'User not found or already deleted' };
+    }
+  } catch (error) {
+    console.error('Error deleting user:', error.message);
+    return { success: false, message: error.message };
+  }
+};
 
 module.exports = {
   registerUser,

@@ -4,64 +4,70 @@ const Jobdb = require('../dataAccess/jobDB');
 // controllers/applicationController.js
 const applyToJob = async (req, res) => {
   try {
-    const userId = req.user?.id || req.body.userId; 
-    const { jobId } = req.body || req.body.jobId; // jobId-г req.body-оос авна
+    const userId = req.user?.id || req.body.userId;
+    const { jobId } = req.body;
 
-    console.log("📩 APPLY TO JOB - jobId:", jobId);
-    if (!userId) return res.status(400).json({ error: "User ID required" });
-    if (!jobId) return res.status(400).json({ error: "Job ID required" });
+    if (!userId) return res.status(400).json({ success: false, message: "User ID required" });
+    if (!jobId) return res.status(400).json({ success: false, message: "Job ID required" });
 
-    if (!userId && !jobId) {
-      return res.status(400).json({ error: 'userId and jobId are required' });
-    }
-    console.log("📥 POST /apply jobId:", jobId);
-    console.log("📥 APPLY TO JOB");
-    console.log("➡️ userId:", userId);
-    console.log("➡️ jobId:", jobId);
     const result = await applicationService.applyToJob(userId, jobId);
-    res.status(200).json({ message: result });
+
+    if (result.success) {
+      return res.status(200).json(result);
+    }
+
+    return res.status(400).json(result);
   } catch (err) {
-    console.error("❌ ApplyToJob Error:", err); // Энэ log одоо харагдах ёстой
-    console.error("❌ ApplyToJob Error Stack:", err.stack); 
-    res.status(400).json({ error: err.message });
+    console.error("❌ ApplyToJob Error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
+
 const cancelApplication = async (req, res) => {
   try {
-    const userId = req.user?.id || req.body.id;
+    const userId = req.user?.id || req.body.userId;
     const jobId = req.params.id || req.body.jobId;
-    if (!userId ||!jobId) {
-      return res.status(400).json({ error: 'userId and jobId are required' });
-    }
-    const result = await applicationService.cancelApplication(userId, jobId);
-    res.status(200).json({ message: result });
-} catch (err) {
-  res.status(400).json({ error: err.message });
-}
 
-}
+    if (!userId || !jobId) {
+      return res.status(400).json({ success: false, message: "User ID and Job ID are required" });
+    }
+
+    const result = await applicationService.cancelApplication(userId, jobId);
+
+    if (result.success) {
+      return res.status(200).json(result);
+    }
+
+    return res.status(400).json(result);
+  } catch (err) {
+    console.error("❌ CancelApplication Error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
 
 
 // хүсэлт илгээсэн ажлууд
 const getMyAppliedJobs = async (req, res) => {
   try {
-    const userId = req.user?.id || req.body.id;
+    const userId = req.user?.id || req.body.userId;
     const status = req.query.status || req.body.status || null;
 
     if (!userId) {
-      return res.status(400).json({ error: "User ID required" });
+      return res.status(400).json({ success: false, message: "User ID required" });
     }
-    console.log("📥 /myapplications GET - userId:", userId);
-    const jobs = await applicationService.getMyAppliedJobs(userId, status);
-    console.log("📥 /myapplications GET - jobs:", jobs);
-    return res.status(200).json({
-      message: "Амжилттай",
-      jobs: jobs || [],
-    });
+    //console.log("📥 /getMyAppliedJobs GET - userId:", userId);
+    const result = await applicationService.getMyAppliedJobs(userId, status);
+
+    if (result.success) {
+     // console.log("📥 /getMyAppliedJobs GET - result:", result);
+      return res.status(200).json(result);
+    }
+    
+    return res.status(400).json(result);
   } catch (err) {
-    console.error('❌ getMyAppliedJobs error:', err.message);
-    return res.status(500).json({ error: "Серверийн алдаа" });
+    console.error("❌ GetMyAppliedJobs Error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
@@ -69,30 +75,44 @@ const getMyAppliedJobs = async (req, res) => {
 // Миний бүх хүсэлт илгээсэн ажлын түүх
 const getMyAllAppliedJobs = async (req, res) => {
   try {
-    const userId = req.user?.id || req.body.id;
-    if (!userId) return res.status(400).json({ error: "User ID required" });
-    
-    const jobs = await applicationService.getMyAllAppliedJobs(userId);
-    res.status(200).json({ message: "Амжилттай", jobs });
+    const userId = req.user?.id || req.body.userId;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User ID required" });
+    }
+
+    const result = await applicationService.getMyAllAppliedJobs(userId);
+
+    if (result.success) {
+      return res.status(200).json(result);
+    }
+
+    return res.status(400).json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("❌ GetMyAllAppliedJobs Error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
 // Ажилд хүсэлт илгээсэн ажилчид
 const getAppliedUsersByJob = async (req, res) => {
   try {
-    const userId = req.user?.id || req.body.id;
-    if (!userId) return res.status(400).json({ error: "User ID required" });
     const jobId = req.params.id || req.body.jobId;
-    if (!jobId) return res.status(400).json({ error: "Job ID required" });
-    console.log("📥 /applications GET - jobId:", jobId);
-    const employees = await applicationService.getAppliedUsersByJob(jobId);
-    console.log("📥 /applications GET - employees:", employees);
-    if (!employees) return res.status(404).json({ error: "No applicants found" });
-    res.status(200).json({ message: "Амжилттай", employees : employees || [] });
+
+    if (!jobId) {
+      return res.status(400).json({ success: false, message: "Job ID required" });
+    }
+
+    const result = await applicationService.getAppliedUsersByJob(jobId);
+
+    if (result.success) {
+      return res.status(200).json(result);
+    }
+
+    return res.status(400).json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("❌ GetAppliedUsersByJob Error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
@@ -114,13 +134,23 @@ const selectCandidates = async (req, res) => {
     const jobId = req.params.id || req.body.jobId;
     const { selectedUserIds } = req.body;
 
-    if (!jobId) return res.status(400).json({ error: "Job ID required" });
+    if (!jobId) {
+      return res.status(400).json({ success: false, message: "Job ID required" });
+    }
+
     const result = await applicationService.selectCandidates(jobId, selectedUserIds);
-    res.status(200).json({ message: "Амжилттай", result });
+
+    if (result.success) {
+      return res.status(200).json(result);
+    }
+
+    return res.status(400).json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("❌ SelectCandidates Error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
 
 // ✅ Интервьюд оролцох ажилчдыг сонгох
 const selectCandidatesfromInterview = async (req, res) => {
@@ -128,20 +158,29 @@ const selectCandidatesfromInterview = async (req, res) => {
     const jobId = req.params.id || req.body.jobId;
     const { selectedUserIds } = req.body;
 
-    if (!jobId) return res.status(400).json({ error: "Job ID required" });
+    if (!jobId) {
+      return res.status(400).json({ success: false, message: "Job ID required" });
+    }
+
     const result = await applicationService.selectCandidatesfromInterview(jobId, selectedUserIds);
-    res.status(200).json({ message: "Амжилттай", result });
+
+    if (result.success) {
+      return res.status(200).json(result);
+    }
+
+    return res.status(400).json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error("❌ SelectCandidatesFromInterview Error:", err.message);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 const getEmployeesByJob = async (req, res) => {
   try {
     const jobId = req.params.id || req.body.jobId;
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
-    console.log("📥 /get employees GET - jobId:", jobId);
+    //console.log("📥 /get employees GET - jobId:", jobId);
     const employers = await applicationService.getEmployeesByJob(jobId);
-    console.log("📥 /get employees GET - employers:", employers);
+    //console.log("📥 /get employees GET - employers:", employers);
     res.status(200).json({ message: "Амжилттай", employers });
 }
 catch (err) {

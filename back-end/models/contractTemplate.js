@@ -5,6 +5,8 @@ const contractTemplateSchema = new mongoose.Schema({
   templateName: { type: String, required: true },
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true },
   title: { type: String, required: true },
+  status: { type: String, enum: ['draft', 'signed', 'rejected'], default: 'draft' },
+
   summary: { type: String },
   contentText: { type: String },     // Mustache placeholders
   contentHTML: { type: String },     // Rendered version (optional)

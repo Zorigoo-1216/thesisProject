@@ -1,6 +1,6 @@
 class ViewJobDTO {
   constructor(job, applications = [], employer = {}, applied = false) {
-    this.jobId = job._id;
+    this.jobId = job._id.toString();
     this.title = job.title;
     this.description = job.description;
     this.category = job.branch;
@@ -11,7 +11,7 @@ class ViewJobDTO {
     this.jobType = job.jobType;
     this.requirements = job.requirements || [];
     this.experienceLevel = job.level || 'none';
-    this.employerId = job.employerId;
+    this.employerId = job.employerId.toString();
     this.applicationStatus = job.status;
     this.hasInterview = job.hasInterview || false;
     this.createdAt = job.createdAt;
@@ -24,7 +24,13 @@ class ViewJobDTO {
     this.benefits = job.benefits || {};
     this.status = job.status || null; 
     // ✅ ШИНЭЭР нэмсэн талбарууд
-    this.employerName = employer?.name || 'Нэргүй';
+    this.employerName = employer
+    ? employer.role === 'company'
+      ? employer.companyName || 'Нэргүй компани'
+      : `${employer.firstName || ''} ${employer.lastName || ''}`.trim()
+    : 'Нэргүй';
+  
+
     this.postedAgo = getTimeAgo(job.createdAt);
     this.isApplied = applied; 
     // ✨ Extra views

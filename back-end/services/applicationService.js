@@ -9,101 +9,114 @@ const viewUserDTO = require("../viewModels/viewUserDTO");
 const mongoose = require("mongoose");
 // ajild huselt ilgeeh
 const applyToJob = async (userId, jobId) => {
-  const existing = await Application.findOne({ userId, jobId });
-  if (existing) throw new Error("Та энэ ажилд аль хэдийн хүсэлт илгээсэн байна");
-
-  const application = await applicationDB.createApplication(userId, jobId);
-  if (!application || !application._id) {
-    throw new Error("Application хадгалах үед алдаа гарлаа");
-  }
-
-  console.log("📨 Adding application to job:", jobId, application._id.toString());
-
-  const updatedJob = await JobDb.updateJobApplications(jobId, application._id.toString());
-
-  if (!updatedJob) throw new Error("Job not found");
-
   try {
-    await notifyApplication(application._id);
-  } catch (err) {
-    console.error("❌ Notification failed:", err.message);
+    const existing = await Application.findOne({ userId, jobId });
+    if (existing) return { success: false, message: "Та энэ ажилд аль хэдийн хүсэлт илгээсэн байна" };
+
+    const application = await applicationDB.createApplication(userId, jobId);
+    if (!application || !application._id) {
+      return { success: false, message: "Application хадгалах үед алдаа гарлаа" };
+    }
+
+    //console.log("📨 Adding application to job:", jobId, application._id.toString());
+
+    const updatedJob = await JobDb.updateJobApplications(jobId, application._id.toString());
+    if (!updatedJob) return { success: false, message: "Job not found" };
+
+    try {
+      await notifyApplication(application._id);
+    } catch (err) {
+      console.error("❌ Notification failed:", err.message);
+    }
+
+    return { success: true, message: "Өргөдөл амжилттай илгээгдлээ." };
+  } catch (error) {
+    console.error("Error applying to job:", error.message);
+    return { success: false, message: error.message };
   }
+};
 
-  return "Өргөдөл амжилттай илгээгдлээ.";
-}
-
-// ajillah huseltiin ilgeehd ajil olgogchid medegdel ilgeeh 
 const notifyApplication = async (appID) => {
-    //const application = await Application.findOne({ _id : appID });
+  try {
     const application = await applicationDB.getApplicationById(appID);
-    if (!application) throw new Error("Application not found");
+    if (!application) return { success: false, message: "Application not found" };
 
     await notificationService.sendapplyNotToEmployer(application);
-    return "Notification sent successfully";
+    return { success: true, message: "Notification sent successfully" };
+  } catch (error) {
+    console.error("Error notifying application:", error.message);
+    return { success: false, message: error.message };
+  }
 };
-// ajliin huselt ilgeesen ajluudiig avah
+
 const getMyAppliedJobs = async (userId, status) => {
-  return await applicationDB.getAppliedJobsByUserId(userId, status);
-}
-// ajliin huselt ilgeesen buh ajluudiig avah
+  try {
+    const jobs = await applicationDB.getAppliedJobsByUserId(userId, status);
+    return { success: true, data: jobs };
+  } catch (error) {
+    console.error("Error getting applied jobs:", error.message);
+    return { success: false, message: error.message };
+  }
+};
+
 const getMyAllAppliedJobs = async (userId) => {
-  const application = await applicationDB.getAllAppliedJobsByUserId(userId);
-  return Array.isArray(application) ? application : [];
-}
-// tuhain ajild huselt ilgeesen ajilchdiig avah
+  try {
+    const application = await applicationDB.getAllAppliedJobsByUserId(userId);
+    return { success: true, data: Array.isArray(application) ? application : [] };
+  } catch (error) {
+    console.error("Error getting all applied jobs:", error.message);
+    return { success: false, message: error.message };
+  }
+};
 
 const selectCandidatesfromInterview = async (jobId, selectedUserIds) => {
-  if (!selectedUserIds || selectedUserIds.length === 0) {
-    throw new Error("No users selected for interview");
+  try {
+    if (!selectedUserIds || selectedUserIds.length === 0) {
+      return { success: false, message: "No users selected for interview" };
+    }
+
+    const job = await JobDb.getJobById(jobId);
+    if (!job) return { success: false, message: "Job not found" };
+
+    //console.log("🔥 selectedUserIds:", selectedUserIds);
+
+    const applications = await Application.find({ jobId, status: 'interview' });
+
+    //console.log("✅ SELECTED USERS:", selectedUserIds);
+
+    await Promise.all(
+      applications.map(async (app) => {
+        const isSelected = selectedUserIds.includes(app.userId.toString());
+        const status = isSelected ? 'accepted' : 'rejected';
+        return Application.findByIdAndUpdate(app._id, { status });
+      })
+    );
+
+    const validUserIds = selectedUserIds.filter((id) =>
+      mongoose.Types.ObjectId.isValid(id)
+    );
+    job.employees = validUserIds.map((id) => new mongoose.Types.ObjectId(id));
+
+    await job.save();
+
+    const updatedApplications = await Application.find({ jobId });
+    // console.log(
+    //   "🧪 Applications after update:",
+    //   updatedApplications.map((a) => ({ id: a._id, status: a.status }))
+    // );
+    //console.log("📋 Final employees to assign:", selectedUserIds);
+
+    return { success: true, message: "Сонгогдсон ажилчид амжилттай бүртгэгдлээ" };
+  } catch (error) {
+    console.error("Error selecting candidates from interview:", error.message);
+    return { success: false, message: error.message };
   }
-
-  const job = await JobDb.getJobById(jobId);
-  if (!job) throw new Error("Job not found");
-
-  console.log("🔥 selectedUserIds:", selectedUserIds);
-
-  const applications = await Application.find({ jobId, status: 'interview' });
-
-  console.log("✅ SELECTED USERS:", selectedUserIds);
-
-  // 🛠 Статус шинэчлэх
-  await Promise.all(
-    applications.map(async (app) => {
-      const isSelected = selectedUserIds.includes(app.userId.toString());
-      const status = isSelected ? 'accepted' : 'rejected';
-      return Application.findByIdAndUpdate(app._id, { status });
-    })
-  );
-
-  // 🧼 description-ыг шалгах
-  if (typeof job.description !== 'string') {
-    job.description = 'Тайлбар оруулаагүй'; // эсвэл JSON.stringify(job.description)
-  }
-
-  // 🟢 Сонгогдсон ажилчдыг оноох
-  const validUserIds = selectedUserIds.filter((id) =>
-    mongoose.Types.ObjectId.isValid(id)
-  );
-  job.employees = validUserIds.map((id) => new mongoose.Types.ObjectId(id));
-
-  await job.save(); // ❗️энэ save-г description зөв болгохгүйгээр хийвэл алдаа гарна
-
-  // 🔍 Дараа нь шалгах
-  const updatedApplications = await Application.find({ jobId });
-  console.log(
-    "🧪 Applications after update:",
-    updatedApplications.map((a) => ({ id: a._id, status: a.status }))
-  );
-  console.log("📋 Final employees to assign:", selectedUserIds);
-
-  return "Сонгогдсон ажилчид амжилттай бүртгэгдлээ";
 };
-
 const selectCandidates = async (jobId, selectedUserIds) => {
   const job = await JobDb.getJobById(jobId);
   if (!job) throw new Error("Job not found");
 
-  console.log("🔥 selectedUserIds:", selectedUserIds);
+  //console.log("🔥 selectedUserIds:", selectedUserIds);
 
   const allApplications = await applicationDB.getApplciationByJobId(
     jobId,
@@ -186,45 +199,42 @@ const getInterviewsByJob = async (jobId) => {
   return usersWithRating.map(obj => obj.user);
 };
 const getAppliedUsersByJob = async (jobId) => {
-  const job = await Job.findById(jobId);
-  if (!job) throw new Error("Job not found");
+  try {
+    const job = await Job.findById(jobId);
+    if (!job) return { success: false, message: "Job not found" };
 
-  //const applications = await Application.find({ jobId });
+    const applications = await applicationDB.getApplciationByJobId(jobId, "pending");
+    const usersWithRating = [];
 
-  const applications = await applicationDB.getApplciationByJobId(jobId, "pending");
-  console.log("applications", applications);
-  const usersWithRating = [];
+    for (const app of applications) {
+      const user = await User.findById(app.userId);
 
-  for (const app of applications) {
-    const user = await User.findById(app.userId);
+      if (user) {
+        const viewUser = new viewUserDTO(user);
+        const branchType = job.branch;
 
-    if (user) {
-      const viewUser = new viewUserDTO(user);
-      const branchType = job.branch;
+        let branchRating = 0;
+        const found = Array.isArray(viewUser.averageRating.byBranch)
+          ? viewUser.averageRating.byBranch.find(
+              r => r.branchType === branchType
+            )
+          : null;
+        branchRating = found?.score || 0;
 
-      // ✅ Тухайн ажлын төрөлтэй тохирох үнэлгээг авах
-      let branchRating = 0;
-      const found = Array.isArray(viewUser.averageRating.byBranch)
-        ? viewUser.averageRating.byBranch.find(
-            r => r.branchType === branchType
-          )
-        : null;
-      branchRating = found?.score || 0;
-
-      usersWithRating.push({
-        user: viewUser,
-        rating: branchRating,
-      });
+        usersWithRating.push({
+          user: viewUser,
+          rating: branchRating,
+        });
+      }
     }
+
+    usersWithRating.sort((a, b) => b.rating - a.rating);
+
+    return { success: true, data: usersWithRating };
+  } catch (error) {
+    console.error("Error getting applied users by job:", error.message);
+    return { success: false, message: error.message };
   }
-
-  console.log("usersWithRating", usersWithRating);
-
-  // ✅ Рейтингээр бууруулж эрэмбэлэх
-  usersWithRating.sort((a, b) => b.rating - a.rating);
-
-  // ✅ Зөвхөн user болон rating-г буцаана
-  return usersWithRating;
 };
 const getEmployeesByJob = async (jobId) => {
   const job = await Job.findById(jobId);
@@ -279,11 +289,17 @@ const getCandidatesByJob = async (jobId) => {
 
 
 const cancelApplication = async (userId, jobId) => {
+  try {
     const job = await JobDb.getJobById(jobId);
-    if (!job) throw new Error("Job not found");
+    if (!job) return { success: false, message: "Job not found" };
+
     await applicationDB.cancelApplication(jobId, userId);
-    return "application canceled";
-}
+    return { success: true, message: "Application canceled" };
+  } catch (error) {
+    console.error("Error canceling application:", error.message);
+    return { success: false, message: error.message };
+  }
+};
 module.exports = { 
   applyToJob,
   getMyAppliedJobs,

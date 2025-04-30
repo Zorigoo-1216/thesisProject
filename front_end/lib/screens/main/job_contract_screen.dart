@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:flutter_html/flutter_html.dart';
 import '../../constant/styles.dart';
 import '../../constant/api.dart';
 import '../../models/user_model.dart';
@@ -140,12 +140,10 @@ class _JobContractScreenState extends State<JobContractScreen>
       if (genResponse.statusCode == 200) {
         final json = jsonDecode(genResponse.body);
         final html = json['html'];
+        final summary = json['summary'];
 
-        /// ❗ ЭНЭ ХЭСЭГ ЧУХАЛ
-        this.templateId = json['templateId']; // ⬅️ зөв хадгалалт
-        debugPrint("✅ Template ID хадгалагдлаа: $templateId");
-
-        _showContractPreview(html);
+        // Хадгалахгүй. Зөвхөн preview
+        await _showContractPreview(html, summary, templateName);
       } else {
         debugPrint("❌ Failed to generate: ${genResponse.body}");
         ScaffoldMessenger.of(context).showSnackBar(
@@ -159,26 +157,58 @@ class _JobContractScreenState extends State<JobContractScreen>
     }
   }
 
-  Future<void> _signTemplate() async {
-    if (templateId == null) return;
+  Future<void> _saveTemplate(
+    String templateName,
+    String html,
+    String summary,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('token');
 
       final response = await http.post(
-        Uri.parse('${baseUrl}contracts/template/$templateId/employer-sign'),
-        headers: {'Authorization': 'Bearer $token'},
+        Uri.parse('${baseUrl}contracts/createtemplate'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'jobId': widget.jobId,
+          'templateName': templateName,
+          'contentHTML': html,
+          'summary': summary,
+        }),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        final id = json['templateId'];
+
+        setState(() {
+          hasTemplate = true;
+          templateId = id;
+          contractHtml = html;
+          summaryHtml = summary;
+
+          /// ❗ ЭНД ШИНЭЭР TabController үүсгэнэ
+          _tabController = TabController(
+            length: 3,
+            vsync: this,
+            initialIndex: 0,
+          );
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Гэрээ амжилттай баталгаажлаа")),
+          const SnackBar(content: Text("Гэрээ амжилттай батлагдлаа")),
         );
       } else {
-        debugPrint("❌ Failed to sign: ${response.body}");
+        debugPrint('❌ Failed to save template: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Гэрээ хадгалахад алдаа гарлаа.")),
+        );
       }
     } catch (e) {
-      debugPrint("❌ Sign error: $e");
+      debugPrint('❌ Exception saving template: $e');
     }
   }
 
@@ -233,7 +263,11 @@ class _JobContractScreenState extends State<JobContractScreen>
     }
   }
 
-  void _showContractPreview(String html) {
+  Future<void> _showContractPreview(
+    String html,
+    String summary,
+    String templateName,
+  ) async {
     bool isChecked = false;
 
     showModalBottomSheet(
@@ -288,9 +322,12 @@ class _JobContractScreenState extends State<JobContractScreen>
                               onPressed:
                                   isChecked
                                       ? () async {
-                                        await _signTemplate();
+                                        await _saveTemplate(
+                                          templateName,
+                                          html,
+                                          summary,
+                                        );
                                         Navigator.pop(context);
-                                        // ❌ _sendContractsToWorkers() энд байх ёсгүй
                                       }
                                       : null,
                               style: ElevatedButton.styleFrom(
@@ -311,6 +348,31 @@ class _JobContractScreenState extends State<JobContractScreen>
         );
       },
     );
+  }
+
+  Future<bool> _confirmSendDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text("Гэрээ илгээх"),
+              content: const Text(
+                "Ажилчдад гэрээ илгээхдээ итгэлтэй байна уу?",
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text("Үгүй"),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text("Тийм"),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
   }
 
   Widget _buildEmployeesTab() {
@@ -355,31 +417,6 @@ class _JobContractScreenState extends State<JobContractScreen>
         ),
       ],
     );
-  }
-
-  Future<bool> _confirmSendDialog() async {
-    return await showDialog<bool>(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text("Гэрээ илгээх"),
-              content: const Text(
-                "Ажилчдад гэрээ илгээхдээ итгэлтэй байна уу?",
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text("Үгүй"),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text("Тийм"),
-                ),
-              ],
-            );
-          },
-        ) ??
-        false;
   }
 
   Widget _contractItem(String title, String desc, String templateName) {
@@ -440,6 +477,10 @@ class _JobContractScreenState extends State<JobContractScreen>
   }
 
   Widget _buildExistingContractTabs() {
+    if (_tabController == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Гэрээний удирдлага"),
@@ -467,9 +508,19 @@ class _JobContractScreenState extends State<JobContractScreen>
   }
 
   Widget _contractHtmlView(String html) {
+    debugPrint("HTML Content: $html");
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: Text(html, style: AppTextStyles.body),
+      child: Html(
+        data: html,
+        style: {
+          "body": Style(
+            fontSize: FontSize.medium,
+            lineHeight: LineHeight.number(1.6),
+            fontWeight: FontWeight.normal,
+          ),
+        },
+      ),
     );
   }
 }

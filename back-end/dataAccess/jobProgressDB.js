@@ -26,10 +26,11 @@ const getProgress = async (jobProgressId) => {
 }
 
 const getJobProgressByJobId = async (jobId) => {
-  return await JobProgress.findOne({ jobId });
+  return await JobProgress.find({ jobId: new mongoose.Types.ObjectId(jobId) }).populate('workerId');
 };
 const getStartRequests = async (jobId) => {
-  return await JobProgress.find({ jobId: new mongoose.Types.ObjectId(jobId) }).populate('workerId');
+  return await JobProgress.find({ 
+    jobId: new mongoose.Types.ObjectId(jobId) }).populate('workerId');
 };
 
 const getJobProgressById = async (progressId) =>{

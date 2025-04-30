@@ -19,20 +19,26 @@ const createApplication = async (userId, jobId ) => {
 
 // Hereglegchiin huselt ilgeesen ajluudiig olno
 const getAppliedJobsByUserId = async (userId, status) => {
-    const applications =  await Application.find({ userId : userId , status: status});
-    const jobs= [];
-    for (const application of applications) {
-        const job = await Job.findById(application.jobId);
-        if (job) {
-          const dto = new viewJobDTO(job);
-          dto.applicationStatus = application.status; // ✅ Application-ын статусыг job DTO-д нэмж байна
-          //dto.appliedAt = application.appliedAt; // хүсвэл нэмэлтээр оруулж болно
-          jobs.push(dto);
-          //jobs.push(new viewJobDTO(job));
-        }
+  const query = { userId };
+  if (status) query.status = status;
+
+  const applications = await Application.find(query);
+  const jobPromises = applications.map(async (application) => {
+    const job = await Job.findById(application.jobId);
+    if (job) {
+      const employer = await User.findById(job.employerId);
+      const dto = new viewJobDTO(job, [application], employer, true);
+      dto.applicationStatus = application.status;
+      return dto;
     }
-    return jobs;
-}
+    return null;
+  });
+
+  const jobsWithNull = await Promise.all(jobPromises);
+  const jobs = jobsWithNull.filter(j => j !== null);
+  return jobs;
+};
+
 // hereglegchiin huselt ilgeesen buh ajluudiig olno
 const getAllAppliedJobsByUserId = async (userId) => {
   const applications =  await Application.find({ userId : userId});

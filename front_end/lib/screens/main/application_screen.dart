@@ -23,6 +23,36 @@ class _ApplicationScreenState extends State<ApplicationScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    _buildTabContent("Pending");
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {
+          // Trigger a rebuild to fetch data for the selected tab
+          _buildTabContent(_getStatusFromTabIndex(_tabController.index));
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Dispose of the TabController to avoid memory leaks
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  String _getStatusFromTabIndex(int index) {
+    switch (index) {
+      case 0:
+        return "Pending";
+      case 1:
+        return "Accepted";
+      case 2:
+        return "Rejected";
+      default:
+        return "Pending";
+    }
   }
 
   Future<List<Map<String, dynamic>>> fetchApplications(String status) async {
@@ -38,10 +68,18 @@ class _ApplicationScreenState extends State<ApplicationScreen>
     );
 
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return List<Map<String, dynamic>>.from(data['jobs']);
+      final result = jsonDecode(response.body);
+
+      // Шалгалт: data['jobs'] нь null эсвэл хоосон эсэх
+      if (result['data'] == null || result['data'] is! List) {
+        return [];
+      }
+      print("Fetched jobs: ${result['data']}");
+      return List<Map<String, dynamic>>.from(result['data']);
     } else {
-      throw Exception("Хүсэлтүүдийг татахад алдаа гарлаа");
+      // Алдаа гарсан тохиолдолд энд хариу өгнө
+      print("Error fetching applications: ${response.statusCode}");
+      return [];
     }
   }
 

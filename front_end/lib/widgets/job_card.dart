@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/job_model.dart';
 import '../constant/styles.dart';
@@ -10,7 +10,9 @@ import '../constant/api.dart';
 class JobCard extends StatefulWidget {
   final Job job;
   final VoidCallback? onRefresh;
+
   const JobCard({super.key, required this.job, this.onRefresh});
+
   @override
   State<JobCard> createState() => _JobCardState();
 }
@@ -18,19 +20,27 @@ class JobCard extends StatefulWidget {
 class _JobCardState extends State<JobCard> {
   bool applied = false;
   bool loading = false;
+
   @override
   void initState() {
     super.initState();
-    applied = widget.job.isApplied; // Check if the user has already applied
+    applied = widget.job.isApplied;
+  }
+
+  String formatDate(String dateStr) {
+    try {
+      final date = DateTime.parse(dateStr);
+      return '${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '';
+    }
   }
 
   Future<void> _toggleApplication() async {
     setState(() => loading = true);
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    final userId = prefs.getString('userId'); // Store this during login
-    // print(token);
-    // print(userId);
+    final userId = prefs.getString('userId');
 
     if (token == null || userId == null) {
       ScaffoldMessenger.of(
@@ -41,8 +51,6 @@ class _JobCardState extends State<JobCard> {
     }
 
     final jobId = widget.job.jobId;
-
-    print("📤 Sending jobId: $jobId");
     final headers = {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer $token',
@@ -51,10 +59,8 @@ class _JobCardState extends State<JobCard> {
     try {
       final uri =
           applied
-              ? Uri.parse(
-                '${baseUrl}applications/apply/cancel/$jobId',
-              ) // DELETE
-              : Uri.parse('${baseUrl}applications/apply'); // POST
+              ? Uri.parse('${baseUrl}applications/apply/cancel/$jobId')
+              : Uri.parse('${baseUrl}applications/apply');
 
       final response =
           applied
@@ -64,13 +70,13 @@ class _JobCardState extends State<JobCard> {
                 headers: headers,
                 body: jsonEncode({'jobId': jobId}),
               );
-      //{'jobId': jobId.toString()}
-      if (response.statusCode == 200) {
-        setState(() => applied = !applied); // Toggle the applied state
 
+      if (response.statusCode == 200) {
+        setState(() => applied = !applied);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(applied ? 'Хүсэлт илгээгдлээ' : 'Цуцаллаа')),
         );
+        widget.onRefresh?.call();
       } else {
         final error = jsonDecode(response.body)['error'] ?? 'Алдаа гарлаа';
         ScaffoldMessenger.of(
@@ -90,10 +96,8 @@ class _JobCardState extends State<JobCard> {
   @override
   Widget build(BuildContext context) {
     final job = widget.job;
-    final salaryLabel = job.salaryType == 'daily' ? '/ өдөр' : '/ цаг';
-    final startDate =
-        job.startDate.split('-').sublist(1).join('-').split('T')[0];
-    final endDate = job.endDate.split('-').sublist(1).join('-').split('T')[0];
+    final startDate = formatDate(job.startDate);
+    final endDate = formatDate(job.endDate);
 
     return Card(
       elevation: AppSpacing.cardElevation,
@@ -155,7 +159,7 @@ class _JobCardState extends State<JobCard> {
                   color: AppColors.primary,
                 ),
                 const SizedBox(width: 6),
-                Text('${job.salary.amount ?? 0}₮ $salaryLabel'),
+                Text(job.salary.getSalaryFormatted()),
               ],
             ),
             Row(
@@ -169,17 +173,9 @@ class _JobCardState extends State<JobCard> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('$startDate -> $endDate', style: AppTextStyles.subtitle),
+                Text('$startDate → $endDate', style: AppTextStyles.subtitle),
                 ElevatedButton(
-                  onPressed:
-                      loading
-                          ? null
-                          : () async {
-                            await _toggleApplication();
-                            if (widget.onRefresh != null) {
-                              widget.onRefresh!(); // call parent refresh
-                            }
-                          },
+                  onPressed: loading ? null : _toggleApplication,
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         applied ? Colors.grey.shade300 : AppColors.primary,
@@ -190,7 +186,9 @@ class _JobCardState extends State<JobCard> {
                           ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
                           )
                           : Text(applied ? 'Илгээсэн' : 'Илгээх'),
                 ),

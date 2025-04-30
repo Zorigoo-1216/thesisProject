@@ -2,10 +2,20 @@ const paymentService = require('../services/paymentService');
 
 // 1. Ажил олгогч тухайн ажлын бүх төлбөрийн мэдээллийг харах
 const viewPaymentInfoByJob = async (req, res) => {
-  const { jobId } = req.params;
-  const userId = req.user.id;
-  const result = await paymentService.getPaymentsByJob(jobId, userId);
-  res.json(result);
+  try {
+    const { jobId } = req.params;
+    const employerId = req.user.id;
+    console.log('📥 /viewPaymentInfoByJob GET - jobId:', jobId);
+    const result = await paymentService.getPaymentsByJob(jobId, employerId);
+    if (!result.success) {
+      return res.status(400).json({ success: false, message: result.message });
+    }
+    console.log('✅ Payment info retrieved successfully:', result.data);
+    res.status(200).json({ success: true, data: result.data });
+  } catch (error) {
+    console.error('❌ Error in viewPaymentInfoByJob:', error.message);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
 };
 
 // 2. Хэрэглэгчийн бүх төлбөрийн мэдээллийг харах

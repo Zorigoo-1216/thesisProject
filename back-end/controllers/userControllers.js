@@ -7,22 +7,21 @@ const register = async (req, res) => {
     const { firstName, lastName, phone, password, role, gender } = req.body;
     const { token, user } = await userService.registerUser({ firstName, lastName, phone, password, role, gender });
 
-    //const user = await userService.getUserByPhone(phone); // viewUserDTO ашиглаж буцаана
-    res.status(201).json({ message: 'Registered successfully', user, token });
+    res.status(201).json({ success: true, message: 'Registered successfully', user, token });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('❌ Error in register:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
 };
-
 const login = async (req, res) => {
   try {
     const { emailOrPhone, password } = req.body;
-    let user;
 
     if (!emailOrPhone || !password) {
-      throw new Error('Email/Phone болон нууц үг шаардлагатай');
+      return res.status(400).json({ success: false, message: 'Email/Phone болон нууц үг шаардлагатай' });
     }
 
+    let user;
     if (emailOrPhone.includes('@')) {
       user = await userService.loginByEmail(emailOrPhone, password);
     } else {
@@ -30,12 +29,14 @@ const login = async (req, res) => {
     }
 
     res.status(200).json({
+      success: true,
       message: 'Login successful',
       user: user.user,
       token: user.token,
     });
   } catch (err) {
-    res.status(401).json({ error: err.message });
+    console.error('❌ Error in login:', err.message);
+    res.status(401).json({ success: false, message: err.message });
   }
 };
 
@@ -44,20 +45,23 @@ const getProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await userService.getProfile(userId);
-    res.status(200).json(result);
+
+    res.status(200).json({ success: true, data: result });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('❌ Error in getProfile:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
-}
+};
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     const updates = req.body;
     const result = await userService.updateProfile(userId, updates);
-    res.status(200).json({ message: 'Profile updated successfully', user: result });
-    
+
+    res.status(200).json({ success: true, message: 'Profile updated successfully', user: result });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('❌ Error in updateProfile:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
@@ -65,20 +69,25 @@ const verify = async (req, res) => {
   try {
     const userId = req.user.id;
     const result = await userService.verify(userId);
-    res.status(200).json(result);
+
+    res.status(200).json({ success: true, data: result });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('❌ Error in verify:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 const deleteUser = async (req, res) => {
   try {
     const userId = req.user.id;
     await userService.deleteUser(userId);
-    res.status(200).json({ message: 'User deleted successfully' });
+
+    res.status(200).json({ success: true, message: 'User deleted successfully' });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('❌ Error in deleteUser:', err.message);
+    res.status(400).json({ success: false, message: err.message });
   }
 };
+
 
 
 
