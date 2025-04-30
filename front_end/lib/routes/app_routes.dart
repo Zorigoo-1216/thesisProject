@@ -160,7 +160,13 @@ class AppRoutes {
       return EmployeeWorkProgressScreen(jobId: args);
     },
 
-    '/employee-payment': (context) => const EmployeePaymentScreen(),
+    '/employee-payment': (context) {
+      final jobId = ModalRoute.of(context)?.settings.arguments as String?;
+      if (jobId == null) {
+        return const Scaffold(body: Center(child: Text("Invalid job ID")));
+      }
+      return EmployeePaymentScreen(jobId: jobId); // 🟢 Шууд дамжуулна
+    },
     '/employer-rate': (context) => const EmployerRateScreen(),
 
     '/profile-detail': (context) => const ProfileDetailScreen(),

@@ -100,19 +100,30 @@ const transferMultipleSalaries = async (paymentIds, employerId) => {
   }
 };
 
-
+const getPaymentsByJobAndUser = async (jobId, userId) => {
+  try {
+    const job = await jobDB.getJobById(jobId);
+    if (!job) return { success: false, message: "Job not found" };
+    if (job.employees.indexOf(userId) === -1) return { success: false, message: "Not authorized" };
+    const payments = await paymentDB.getByJobAndUser(jobId, userId);
+    return { success: true, data: payments };
+}
+  catch (error) {
+    console.error("Error getting payments by job and user:", error.message);
+    return { success: false, message: error.message };
+  }
+}
 
 // 6. Статусыг гараар paid болгох (optional admin/testing)
 const markPaymentAsPaid = async (paymentId, userId) => {
   try {
+    
     const payment = await Payment.findById(paymentId);
     if (!payment) return { success: false, message: "Payment not found" };
-
-    payment.status = 'paid';
-    payment.paidAt = new Date();
-    await payment.save();
-
-    return { success: true, data: payment };
+    if (payment.workerId.toString() !== userId.toString()) return { success: false, message: "Not authorized" };
+    const updated = await Payment.updateOne({ _id: paymentId }, { status: 'paid'});
+    if (!updated) return { success: false, message: "Payment not found" };
+    return { success: true, data: updated };
   } catch (error) {
     console.error("Error marking payment as paid:", error.message);
     return { success: false, message: error.message };
@@ -156,7 +167,7 @@ const createPayments = async (jobprogressIds, jobId) => {
           jobId,
           jobProgressId: id,
           workerId: progress.workerId,
-          employeeId: progress.employerId,
+          employerId: progress.employerId,
           status: 'unpaid',
           totalAmount: salary.total,
           breakdown: {
@@ -220,4 +231,5 @@ module.exports =  {
  transferOneSalary, 
  transferMultipleSalaries, 
  markPaymentAsPaid, 
+ getPaymentsByJobAndUser
 }

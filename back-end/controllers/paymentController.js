@@ -52,10 +52,26 @@ const transferWorkersSalary = async (req, res) => {
 
 // 6. Статусыг `paid` болгох (тест эсвэл админ нөхцөлд)
 const markAsPaid = async (req, res) => {
-  const { paymentId, userId } = req.params;
+  const userId = req.user.id;
+  const { paymentId } = req.params;
   const result = await paymentService.markPaymentAsPaid(paymentId, userId);
   res.json(result);
 };
+
+const viewPaymentInfoByJobAndUser = async (req, res) => {
+  try{
+    const userId = req.user.id;
+    const { jobId } = req.params;
+    const result = await paymentService.getPaymentsByJobAndUser(jobId, userId);
+    console.log('✅ Payment info retrieved successfully:', result);
+    res.json(result);
+  }
+  catch (error) {
+    console.error('❌ Error in viewPaymentInfoByJobAndUser:', error.message);
+    res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+};
+
 
 module.exports = {
   viewPaymentInfoByJob,
@@ -63,5 +79,6 @@ module.exports = {
   getPaymentDetail,
   transferWorkerSalary,
   transferWorkersSalary,
-  markAsPaid
+  markAsPaid,
+  viewPaymentInfoByJobAndUser
 };

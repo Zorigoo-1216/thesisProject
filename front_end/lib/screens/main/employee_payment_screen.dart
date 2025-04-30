@@ -1,38 +1,110 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../constant/api.dart';
 import '../../constant/styles.dart';
 import '../../widgets/custom_sliver_app_bar.dart';
 
 class EmployeePaymentScreen extends StatefulWidget {
-  const EmployeePaymentScreen({super.key});
+  final String jobId;
+  const EmployeePaymentScreen({super.key, required this.jobId});
 
   @override
   State<EmployeePaymentScreen> createState() => _EmployeePaymentScreenState();
 }
 
 class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
-  bool? isPaid;
+  Map<String, dynamic>? payment;
+  bool loading = true;
 
-  void showConfirmDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text("Цалинг шилжүүлэх"),
-            content: const Text("Цалинг амжилттай шилжүүллээ."),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  setState(() => isPaid = true);
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-    );
+  @override
+  void initState() {
+    super.initState();
+    loadPayment();
   }
 
-  Widget _statusBadge(bool paid) {
+  Future<void> loadPayment() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    final userId = prefs.getString('userId') ?? '';
+
+    final res = await http.get(
+      Uri.parse('${baseUrl}payments/job/${widget.jobId}/$userId'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (res.statusCode == 200) {
+      final data = jsonDecode(res.body);
+      if (data['success'] == true &&
+          data['data'] != null &&
+          data['data'].isNotEmpty) {
+        setState(() {
+          payment = data['data'];
+          loading = false;
+        });
+      } else {
+        showDialog(
+          context: context,
+          builder:
+              (_) => AlertDialog(
+                title: const Text("Мэдээлэл"),
+                content: const Text(
+                  "Ажил дуусаагүй байна. Төлбөр үүсээгүй байна.",
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text("OK"),
+                  ),
+                ],
+              ),
+        );
+        setState(() => loading = false);
+      }
+    } else {
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> markAsPaid() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+    final userId = prefs.getString('userId') ?? '';
+
+    final res = await http.put(
+      Uri.parse('${baseUrl}payments/${widget.jobId}/${payment!['_id']}'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (res.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Цалин төлөгдсөн төлөвт шилжлээ")),
+      );
+      await loadPayment();
+    } else {
+      debugPrint('❌ Mark as paid failed: ${res.body}');
+    }
+  }
+
+  Widget _statusBadge(String status) {
+    Color color;
+    String label;
+
+    switch (status) {
+      case 'paid':
+        color = Colors.green;
+        label = 'Төлөгдсөн';
+        break;
+      case 'paiding':
+        color = Colors.orange;
+        label = 'Төлөгдөх шатандаа';
+        break;
+      default:
+        color = Colors.red;
+        label = 'Төлөгдөөгүй';
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -40,11 +112,8 @@ class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        paid ? "Төлөгдсөн" : "Төлөгдөөгүй",
-        style: TextStyle(
-          color: paid ? Colors.green : Colors.red,
-          fontWeight: FontWeight.bold,
-        ),
+        label,
+        style: TextStyle(color: color, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -58,71 +127,95 @@ class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Card(
-                    elevation: 2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSpacing.radius),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(16),
-                      leading: const CircleAvatar(
-                        backgroundImage: AssetImage('assets/images/avatar.png'),
-                      ),
-                      title: const Text("О.Эрдэнэцогт"),
-                      subtitle: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              child:
+                  loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : payment == null
+                      ? const Text("Төлбөрийн мэдээлэл олдсонгүй.")
+                      : Column(
                         children: [
-                          SizedBox(height: 6),
-                          Text("Ажилласан цаг: 01:05:30"),
-                          SizedBox(height: 4),
-                          Text("Цалин: 154500₮"),
+                          Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radius,
+                              ),
+                            ),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.all(16),
+                              leading: const CircleAvatar(
+                                backgroundImage: AssetImage(
+                                  'assets/images/avatar.png',
+                                ),
+                              ),
+                              title: Text(
+                                payment!['workerId']?['lastName'] != null
+                                    ? "${payment!['workerId']['lastName']} ${payment!['workerId']['firstName']}"
+                                    : 'Нэргүй',
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 6),
+                                  if (payment!['jobstartedAt'] != null &&
+                                      payment!['jobendedAt'] != null)
+                                    Text(
+                                      "Ажилласан: ${_formatWorkedTime(payment!['jobstartedAt'], payment!['jobendedAt'])}",
+                                    ),
+                                  const SizedBox(height: 4),
+                                  Text("Цалин: ${payment!['totalAmount']}₮"),
+                                ],
+                              ),
+                              trailing: _statusBadge(payment!['status']),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          if (payment!['status'] == 'paiding')
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: markAsPaid,
+                                    child: const Text("Цалин өгсөн"),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed:
+                                        () => ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          const SnackBar(
+                                            content: Text(
+                                              "Цалинг өгөөгүй гэж тэмдэглэх боломжгүй",
+                                            ),
+                                          ),
+                                        ),
+                                    child: const Text("Цалин өгөөгүй"),
+                                  ),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
-                      trailing: isPaid != null ? _statusBadge(isPaid!) : null,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: showConfirmDialog,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text("Цалин өгсөн"),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => setState(() => isPaid = false),
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.primary),
-                            foregroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text("Цалин өгөөгүй"),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _formatWorkedTime(String start, String end) {
+    try {
+      final startTime = DateTime.parse(start);
+      final endTime = DateTime.parse(end);
+      final diff = endTime.difference(startTime);
+      final hours = diff.inHours;
+      final minutes = diff.inMinutes % 60;
+      return "$hours цаг ${minutes.toString().padLeft(2, '0')} мин";
+    } catch (_) {
+      return "0 цаг 0 мин";
+    }
   }
 }
