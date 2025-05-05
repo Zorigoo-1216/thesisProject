@@ -21,9 +21,15 @@ const getByJobAndUser = async (jobId, userId) => {
   .populate('workerId', 'firstName lastName phone') // 👈
   .populate('employerId', 'firstName lastName');
 }
+
+const getByJobByStatus = async (jobId, status) => {
+  return await Payment.find({ jobId, status });
+};
+
 module.exports = {
   createPayment,
   getByJobProgressId,
   markPaymentTransferred,
-  getByJobAndUser
+  getByJobAndUser,
+  getByJobByStatus
 };

@@ -1,6 +1,7 @@
 class Job {
   final String jobId;
   final String title;
+  final String employerId;
   final String description;
   final String location;
   final Salary salary;
@@ -38,17 +39,26 @@ class Job {
     required this.possibleForDisabled,
     required this.employerName,
     required this.postedAgo,
+    required this.employerId,
     this.isApplied = false,
     this.applicationStatus = 'none',
   });
 
   factory Job.fromJson(Map<String, dynamic> json) {
+    late Salary salaryData;
+    try {
+      salaryData = Salary.fromJson(json['salary'] ?? {});
+    } catch (_) {
+      salaryData = Salary(amount: 0, type: 'daily', currency: 'MNT');
+    }
+
     return Job(
       jobId: json['jobId'] ?? json['_id'] ?? '',
+      employerId: json['employerId'] ?? '',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       location: json['location'] ?? '',
-      salary: Salary.fromJson(json['salary'] ?? {}),
+      salary: salaryData,
       salaryType: json['salaryType'] ?? 'daily',
       currency: json['currency'] ?? 'MNT',
       jobType: json['jobType'] ?? '',

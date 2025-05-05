@@ -121,6 +121,58 @@ const updateAverageRating = async (userId) => {
 const getUsersByIds = async (userIds) => {
   return await User.find({ _id: { $in: userIds } });
 }
+
+
+const updateEmployeeAverageRating = async (userId) => {
+  const ratings = await Rating.find({ toUserId: userId });
+
+  if (ratings.length === 0) return;
+
+  const branchScores = {};
+  const branchCounts = {};
+
+  ratings.forEach(r => {
+    const score = r.manualRating.score;
+    const branch = r.branchType;
+
+    branchScores[branch] = (branchScores[branch] || 0) + score;
+    branchCounts[branch] = (branchCounts[branch] || 0) + 1;
+  });
+
+  const byBranch = Object.keys(branchScores).map(branch => ({
+    branchType: branch,
+    score: +(branchScores[branch] / branchCounts[branch]).toFixed(1)
+  }));
+
+  const overall = ratings.reduce((sum, r) => sum + r.manualRating.score, 0) / ratings.length;
+
+  await User.findByIdAndUpdate(userId, {
+    $set: {
+      averageRating: {
+        overall: +overall.toFixed(1),
+        byBranch
+      }
+    }
+  });
+}
+
+const updateEmployerAverageRating = async (userId) => {
+  const ratings = await Rating.find({ toUserId: userId });
+
+  if (ratings.length === 0) return;
+
+  const totalScore = ratings.reduce((sum, r) => sum + r.manualRating.score, 0);
+  const average = totalScore / ratings.length;
+
+  await User.findByIdAndUpdate(userId, {
+    $set: {
+      averageRatingForEmployer: {
+        overall: +average.toFixed(1),
+        totalRatings: ratings.length
+      }
+    }
+  });
+}
 module.exports = {
   checkUserbyEmail,
   checkUserbyPhoneNumber,
@@ -141,5 +193,7 @@ module.exports = {
   getUserByPhoneFull,
   findUsersByQuery,
   updateAverageRating,
-  getUsersByIds
+  getUsersByIds,
+  updateEmployeeAverageRating,
+  updateEmployerAverageRating
 };

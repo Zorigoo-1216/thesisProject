@@ -15,7 +15,7 @@ const createJob = async (jobData) => {
 
 // hereglegchiin uusgesen zariin jagsaaltiig haruulah
 const getUserPostedJobHistory = async (userId) => {
-    const jobs = await Job.find({employerId: userId});
+    const jobs = await Job.find({employerId: userId, status: { $ne: 'closed' }});
     const userJobs = await Promise.all(jobs.map(async (job) => {
         const applications = await Application.find({ jobId: job._id });
         const employees = await User.find({ _id: { $in: job.employees } });
@@ -37,8 +37,13 @@ const getdJoblist = async () => {
 
 // ajliin zar filter eer haih
 const findJobsByQuery = async (query) => {
-    const jobs = await Job.find(query).sort({ createdAt: -1 });
-    return jobs.map(job => new viewJobDTO(job)); 
+  const jobs = await Job.find(query).sort({ createdAt: -1 });
+
+  // 👇 заавал employerId-тай job-уудыг үр дүнгээр үлдээх
+  // const safeJobs = jobs.filter(job => job.employerId && job._id);
+  
+  // return safeJobs.map(job => new viewJobDTO(job));
+  return jobs;
   };
 // ajliin zar iig id-aar avah
 const getJobById = async (id) => {
@@ -129,6 +134,14 @@ const getJobLisForUser = async (user, filters) => {
     job.employees.push(employeeId);
     return await job.save();
   } 
+
+  const updateJobStatus = async (jobId, newStatus) => {
+    return await Job.findByIdAndUpdate(jobId, { status: newStatus });
+  };
+  
+
+
+
 module.exports = {
     createJob, 
     getdJoblist, 
@@ -144,4 +157,5 @@ module.exports = {
     cancelApplication,
     findUsersByQuery,
     addEmployeeToJob,
+    updateJobStatus
 };

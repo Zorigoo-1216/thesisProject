@@ -88,6 +88,15 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const getUserInfo = async (req, res) => {
+  try {
+    const user = await userService.getUser();
+    res.status(200).json({ success: true, data: user });
+  } catch (err) {
+    console.error('❌ Error in getUser:', err.message);
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
 
 
 
@@ -98,5 +107,6 @@ module.exports = {
   updateProfile,
   verify,
   deleteUser,
+ getUserInfo 
 
 };

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:front_end/models/job_model.dart';
 import '../screens/start/splash_screen.dart';
 import '../screens/start/start_screen.dart';
 import '../screens/start/login_screen.dart';
@@ -37,7 +38,13 @@ class AppRoutes {
     '/home': (context) => const MainWrapper(),
 
     '/employer': (context) => const EmployerScreen(),
-    '/job-detail': (context) => const JobDetailScreen(),
+    '/job-detail': (context) {
+      final args = ModalRoute.of(context)!.settings.arguments;
+      if (args is! Job) {
+        return const Scaffold(body: Center(child: Text("Invalid job data")));
+      }
+      return JobDetailScreen(job: args);
+    },
     '/job-filter-sheet': (context) => const JobFilterSheet(),
     //'/job-request': (context) => const JobRequestScreen(),
     '/job-list-screen': (context) => const JobListScreen(),
@@ -117,7 +124,13 @@ class AppRoutes {
       );
     },
 
-    '/rate-employee': (context) => const RateEmployeeScreen(),
+    '/rate-employee': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments as Map?;
+      if (args == null || !args.containsKey('jobId')) {
+        return const Scaffold(body: Center(child: Text("jobId байхгүй байна")));
+      }
+      return RateEmployeeScreen(jobId: args['jobId'].toString());
+    },
     '/job-progress': (context) {
       final args = ModalRoute.of(context)?.settings.arguments as Map?;
       if (args == null || !args.containsKey('jobId')) {
@@ -167,7 +180,13 @@ class AppRoutes {
       }
       return EmployeePaymentScreen(jobId: jobId); // 🟢 Шууд дамжуулна
     },
-    '/employer-rate': (context) => const EmployerRateScreen(),
+    '/employer-rate': (context) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is! String) {
+        return const Scaffold(body: Center(child: Text("jobId байхгүй байна")));
+      }
+      return EmployerRateScreen(jobId: args);
+    },
 
     '/profile-detail': (context) => const ProfileDetailScreen(),
     '/job-history': (context) => const JobHistoryScreen(),

@@ -4,6 +4,7 @@ const notificationService = require("../services/notificationService"); // зө�
 const viewJobDTO = require("../viewModels/viewJobDTO"); // jobDTO
 const mongoose = require('mongoose');
 const applicationDB = require("../dataAccess/applicationDB"); // applicationDB
+const viewUserDTO = require("../viewModels/viewUserDTO");
 // ajliin zar uusgeh 
 const createJob = async (jobData, employerId) => {
   try {
@@ -126,15 +127,26 @@ const searchJobs = async (filters) => {
     }
 
     const jobs = await jobDB.findJobsByQuery(query);
+    //console.log("searched jobs" , jobs);
     const users = await userDB.getUsersByIds(jobs.map(job => job.employerId));
+    //console.log("searched users" , users);
     const applications = await applicationDB.getApplicationFilteredByJobId(jobs.map(job => job._id), 'open');
-
+    //console.log("searched applications" , applications);
     const finalJobs = jobs.map(job => {
-      const employer = users.find(u => u._id.toString() === job.employerId.toString());
-      const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
+      const employer = users.find(u =>
+        u && u._id && job.employerId &&
+        u._id.toString() === job.employerId.toString()
+      );
+    
+      const jobApplications = applications.filter(app =>
+        app && app.jobId && job._id &&
+        app.jobId.toString() === job._id.toString()
+      );
+    
       return new viewJobDTO(job, jobApplications, employer);
     });
-
+    
+    // console.log("final jobs" , finalJobs);
     return { success: true, data: finalJobs };
   } catch (error) {
     console.error("Error searching jobs:", error.message);

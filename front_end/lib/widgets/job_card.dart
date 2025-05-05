@@ -99,102 +99,111 @@ class _JobCardState extends State<JobCard> {
     final startDate = formatDate(job.startDate);
     final endDate = formatDate(job.endDate);
 
-    return Card(
-      elevation: AppSpacing.cardElevation,
-      margin: const EdgeInsets.only(bottom: AppSpacing.md),
-      color: AppColors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppSpacing.radius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Employer Info
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const CircleAvatar(
-                  radius: 24,
-                  backgroundImage: AssetImage('assets/images/avatar.png'),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(job.employerName, style: AppTextStyles.body),
-                      Text(
-                        job.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppSpacing.radius),
+      onTap: () {
+        debugPrint("✅ Navigating to detail: ${job.title}");
+        Navigator.pushNamed(context, '/job-detail', arguments: job);
+      },
+      child: Card(
+        elevation: AppSpacing.cardElevation,
+        margin: const EdgeInsets.only(bottom: AppSpacing.md),
+        color: AppColors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.radius),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Employer Info
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const CircleAvatar(
+                    radius: 24,
+                    backgroundImage: AssetImage('assets/images/avatar.png'),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(job.employerName, style: AppTextStyles.body),
+                        Text(
+                          job.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(job.postedAgo, style: AppTextStyles.subtitle),
-                    ],
+                        const SizedBox(height: 4),
+                        Text(job.postedAgo, style: AppTextStyles.subtitle),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                const Icon(
-                  Icons.location_on,
-                  size: 18,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 6),
-                Text(job.location),
-              ],
-            ),
-            Row(
-              children: [
-                const Icon(
-                  Icons.attach_money,
-                  size: 18,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(width: 6),
-                Text(job.salary.getSalaryFormatted()),
-              ],
-            ),
-            Row(
-              children: [
-                const Icon(Icons.group, size: 18, color: AppColors.primary),
-                const SizedBox(width: 6),
-                Text('Ажиллах хүн: ${job.capacity}'),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('$startDate → $endDate', style: AppTextStyles.subtitle),
-                ElevatedButton(
-                  onPressed: loading ? null : _toggleApplication,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        applied ? Colors.grey.shade300 : AppColors.primary,
-                    foregroundColor: applied ? AppColors.text : Colors.white,
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.location_on,
+                    size: 18,
+                    color: AppColors.primary,
                   ),
-                  child:
-                      loading
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                          : Text(applied ? 'Илгээсэн' : 'Илгээх'),
-                ),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 6),
+                  Text(job.location),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.attach_money,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(job.salary.getSalaryFormatted()),
+                ],
+              ),
+              Row(
+                children: [
+                  const Icon(Icons.group, size: 18, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text('Ажиллах хүн: ${job.capacity}'),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('$startDate → $endDate', style: AppTextStyles.subtitle),
+                  ElevatedButton(
+                    onPressed: loading ? null : _toggleApplication,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          applied ? Colors.grey.shade300 : AppColors.primary,
+                      foregroundColor: applied ? AppColors.text : Colors.white,
+                    ),
+                    child:
+                        loading
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                            : Text(applied ? 'Илгээсэн' : 'Илгээх'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

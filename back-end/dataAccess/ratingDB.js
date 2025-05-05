@@ -13,8 +13,17 @@ const getRatingsByUser = async (userId) => {
     .populate('fromUserId', 'firstName lastName role companyName') // үнэлгээ өгсөн хүн
     .populate('jobId', 'title'); // холбогдсон ажил
 };
+
+const createRating = async (data) => {
+  const { fromUserId, toUserId, jobId } = data;
+  const existing = await Rating.findOne({ fromUserId, toUserId, jobId });
+  if (existing) return { success: false, message: 'Already rated' };
+
+  return await Rating.create(data);
+};
 module.exports = {
   checkExisting,
   saveRating,
-  getRatingsByUser
+  getRatingsByUser,
+  createRating
 };

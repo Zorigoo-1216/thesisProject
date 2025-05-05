@@ -28,7 +28,7 @@ const getJobList = async (req, res) => {
     const userId = req.user?.id;
     const jobs = await jobService.getJobList(userId);
     if(jobs.success === true) {
-      //console.log('Job list fetched successfully:', jobs.data);
+      console.log('Job list fetched successfully:', jobs);
       return res.status(200).json({ success: true, message: 'Job list fetched successfully', jobs: jobs.data });
     }
   //  return res.status(200).json({ success: true, message: 'Job list fetched successfully', jobs });
@@ -43,7 +43,8 @@ const searchJobs = async (req, res) => {
   try {
     const filter = req.query;
     const jobs = await jobService.searchJobs(filter);
-    return res.status(200).json({ success: true, message: 'Job list fetched successfully', jobs });
+    console.log(jobs);
+    return res.status(200).json({ success: true, message: 'Job list fetched successfully', jobs : jobs.data });
   } catch (error) {
     console.error('❌ Error searching jobs:', error.message);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });

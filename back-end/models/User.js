@@ -56,6 +56,11 @@ const userSchema = new mongoose.Schema({
         score: Number,
       }
     ]
+  },
+
+  averageRatingForEmployer: {
+    overall: { type: Number, default: 0 },
+    totalRatings: { type: Number, default: 0 }
   }
 });
 

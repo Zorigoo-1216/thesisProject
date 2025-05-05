@@ -83,11 +83,46 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       if (data['success'] == true) {
+        final payments = List<Payment>.from(
+          data['data'].map((e) => Payment.fromJson(e)),
+        );
+
         setState(() {
-          allPayments = List<Payment>.from(
-            data['data'].map((e) => Payment.fromJson(e)),
-          );
+          allPayments = payments;
         });
+
+        // ✅ Бүх төлбөрийн статус 'paid' эсэхийг шалгана
+        final allPaid =
+            payments.isNotEmpty && payments.every((p) => p.status == 'paid');
+        if (allPaid) {
+          Future.delayed(Duration.zero, () {
+            showDialog(
+              context: context,
+              builder:
+                  (_) => AlertDialog(
+                    title: const Text("Санал хүсэлт"),
+                    content: const Text("Та ажилчдад үнэлгээ өгнө үү."),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text("Дараа"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.pushNamed(
+                            context,
+                            '/rate-employee',
+                            arguments: widget.jobId,
+                          );
+                        },
+                        child: const Text("Үнэлгээ өгөх"),
+                      ),
+                    ],
+                  ),
+            );
+          });
+        }
       }
     } else {
       debugPrint('❌ Error fetching payments: ${response.body}');

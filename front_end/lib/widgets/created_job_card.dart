@@ -104,7 +104,11 @@ class CreatedJobCard extends StatelessWidget {
   Widget _tag(BuildContext context, Map<String, dynamic> tag) {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, tag['route'], arguments: job.jobId);
+        Navigator.pushNamed(
+          context,
+          tag['route'],
+          arguments: job.jobId.toString(),
+        );
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
