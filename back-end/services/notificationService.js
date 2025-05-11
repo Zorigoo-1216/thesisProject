@@ -1,30 +1,35 @@
-const NotificationDb = require('../dataAccess/notificationDB');
-const JobDb = require('../dataAccess/jobDB');
+const NotificationDB = require('../dataAccess/notificationDB');
 const UserDb = require('../dataAccess/userDB');
-const buildJobNotificationMessage = (job) => {
-  return `${job.location} байршилд "${job.title}" ажил зарлагдлаа. Цалин: ${job.salary?.amount}₮/${job.salary?.type === 'hourly' ? 'цаг' : 'өдөр'}`;
-};
-// Ajiltand ajliin zar uusehed medegdel ilgeene
-const sendBulkNotifications = async (users, job) => {
-  const message = buildJobNotificationMessage(job);
-  const notifications = users.map(user => ({
-    userId: user._id,
-    type: 'job_match',
-    title: 'Танд тохирох шинэ ажил байна',
-    message,
-    isRead: false,
-    createdAt: new Date()
-  }));
-  return await NotificationDb.createManyNotification(notifications);
-  //return await Notification.insertMany(notifications);
-};
+const { sendSocketNotification } = require('../socket');
 
-// ajillah huselt ilgeesen medegdel ilgeene
+const sendNotification = async (userIds, notificationData) => {
+  try {
+    const ids = Array.isArray(userIds) ? userIds : [userIds];
 
-const createNotification = async (notification) => {
-  return await NotificationDb.createNotification(notification);
-}
+    for (const userId of ids) {
+      const user = await UserDb.getUserById(userId);
+      if (!user) continue;
+
+      const notification = {
+        userId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type || 'generic',
+        isRead: false,
+        createdAt: new Date()
+      };
+
+      // DB-д хадгалах
+      await NotificationDB.createNotification(notification);
+
+      // Socket-р илгээх (хэрэв онлайн байвал)
+      sendSocketNotification(userId, notification);
+    }
+  } catch (error) {
+    console.error('❌ sendNotification error:', error.message);
+  }
+};
 
 module.exports = {
-  sendBulkNotifications,createNotification
+  sendNotification,
 };

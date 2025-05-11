@@ -251,8 +251,12 @@ const sendToWorkers = async (contractTemplateId, employerId, employeeIds) => {
       });
 
       contracts.push(contract);
+      const notificationData = {
+        title: 'New Contract',
+        message: `${employer.firstName} танд ${job.title} ажилд гэрээ илгээлээ`,
+        type : 'contract',
     }
-
+  }
     return { success: true, data: contracts };
   } catch (error) {
     console.error('Error sending contracts to workers:', error.message);

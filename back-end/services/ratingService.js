@@ -7,7 +7,7 @@ const Rating = require('../models/Rating');
 const Job = require('../models/Job');
 const JobProgress = require('../models/jobProgress');
 const createRating = async (data) => {
-  const { fromUserId, toUserId, jobId, branchType, manualRating, systemRating } = data;
+  const { fromUserId, toUserId, jobId } = data;
 
   // Duplicate шалгах
   const existing = await ratingDB.checkExisting(fromUserId, toUserId, jobId);
@@ -16,11 +16,12 @@ const createRating = async (data) => {
   // Save Rating
   const rating = await ratingDB.saveRating(data);
 
-  // Recalculate average rating
+  // Recalculate average
   await userDB.updateAverageRating(toUserId);
 
   return rating;
 };
+
 const getUserRatings = async (userId) => {
   const ratings = await ratingDB.getRatingsByUser(userId);
 
@@ -36,11 +37,14 @@ const getUserRatings = async (userId) => {
       title: r.jobId.title,
       branchType: r.branchType
     },
-    manualRating: r.manualRating,
-    systemRating: r.systemRating,
+    criteria: r.criteria,
+    comment: r.comment,
+    targetRole: r.targetRole,
+    totalScore: r.totalScore ?? null,
     createdAt: r.createdAt
   }));
 };
+
 
 const getJobRatingsEmployees = async (userId, jobId) => {
   const job = await jobDB.getJobById(jobId);
@@ -51,16 +55,14 @@ const getJobRatingsEmployees = async (userId, jobId) => {
   }
 
   const payments = await paymentDB.getByJobByStatus(jobId, 'paid');
-  if (!payments) {
-    return { success: false, message: "Failed to retrieve payments" };
-  }
+  if (!payments) return { success: false, message: "Failed to retrieve payments" };
 
   const workerIds = payments
-    .map(p => p.workerId?._id || p.workerId) // ObjectId эсвэл ref гүйнэ
-    .filter(id => !!id); // null/undefined устгана
+    .map(p => p.workerId?._id || p.workerId)
+    .filter(id => !!id);
 
   if (workerIds.length === 0) {
-    return { success: true, data: [] }; // ✅ success true байж болно
+    return { success: true, data: [] };
   }
 
   const workers = await userDB.getUsersByIds(workerIds);
@@ -78,12 +80,11 @@ const getJobRatingsEmployees = async (userId, jobId) => {
 const getJobRatingByEmployer = async (userId, jobId) => {
   const job = await jobDB.getJobById(jobId);
   if (!job) return { success: false, message: "Job not found" };
+
   if (!job.employees.some(id => id.toString() === userId.toString())) {
     return { success: false, message: "Not authorized" };
   }
-  
-  //const payments = await paymentDB.getByJobByStatus(jobId, 'paid');
-  //if (!payments) return { success: false, message: "Failed to retrieve payments" };
+
   const employer = await userDB.getUserById(job.employerId);
   if (!employer) return { success: false, message: "Employer not found" };
 
@@ -92,60 +93,67 @@ const getJobRatingByEmployer = async (userId, jobId) => {
     name: `${employer.lastName ?? ''} ${employer.firstName ?? ''}`.trim(),
     phone: employer.phone ?? '',
     role: employer.role ?? '',
-    averageRating: employer.averageRatingForEmployer?.overall ?? 0, // ⭐ Нэмэгдсэн хэсэг
-    //totalRatings: employer.averageRatingForEmployer?.totalRatings ?? 0 // 🔢 Сонголтоор нэмж харуулж болно
+    averageRating: employer.averageRatingForEmployer?.overall ?? 0,
   };
-  return { success: true , data : employerWithName}
-}
 
-const rateEmployee = async (userId, employeeId, ratingInput, jobId) => {
+  return { success: true, data: employerWithName };
+};
+
+
+const rateEmployee = async (userId, employeeId, criteria, comment, jobId) => {
   const job = await jobDB.getJobById(jobId);
   const jobProgress = await JobProgress.findOne({ jobId, workerId: employeeId });
 
-  // 🧠 System rating – punctuality
+  // System rating: punctuality
   let punctualityScore = 0;
-if (jobProgress?.startedAt && job.workStartTime) {
-  const scheduledTime = new Date(job.startDate);
-  const [hours, minutes] = job.workStartTime.split(':');
-  scheduledTime.setHours(Number(hours), Number(minutes));
+  if (jobProgress?.startedAt && job.workStartTime) {
+    const scheduledTime = new Date(job.startDate);
+    const [hours, minutes] = job.workStartTime.split(':');
+    scheduledTime.setHours(Number(hours), Number(minutes));
 
-  const actualStart = new Date(jobProgress.startedAt);
-  const diffMinutes = Math.floor((actualStart - scheduledTime) / (60 * 1000));
+    const actualStart = new Date(jobProgress.startedAt);
+    const diffMinutes = Math.floor((actualStart - scheduledTime) / (60 * 1000));
 
-  if (diffMinutes <= 0) punctualityScore = 5; // Цагаа барьсан
-  else if (diffMinutes <= 15) punctualityScore = 4;
-  else if (diffMinutes <= 30) punctualityScore = 3;
-  else if (diffMinutes <= 45) punctualityScore = 2;
-  else if (diffMinutes <= 60) punctualityScore = 1;
-  else punctualityScore = 0;
-}
+    if (diffMinutes <= 0) punctualityScore = 5;
+    else if (diffMinutes <= 15) punctualityScore = 4;
+    else if (diffMinutes <= 30) punctualityScore = 3;
+    else if (diffMinutes <= 45) punctualityScore = 2;
+    else if (diffMinutes <= 60) punctualityScore = 1;
+  }
 
+  // System rating: completion
+  let completionScore =
+    jobProgress?.status === 'completed' || jobProgress?.status === 'verified'
+      ? 5
+      : 0;
 
-  // ✅ System rating – job completed
-  let completionScore = jobProgress?.status === 'completed' || jobProgress?.status === 'verified' ? 5 : 0;
+  // Convert manual criteria average to 10 scale
+  const manualScores = Object.values(criteria);
+  const manualAvg = manualScores.reduce((sum, s) => sum + s, 0) / manualScores.length;
+  const manualConverted = (manualAvg / 5) * 10;
 
-  // 🧮 Total: system (10) + manual (5 → convert to 10)
-  const manualConverted = (ratingInput.score / 5) * 10;
+  // Final calculation
   const total20 = manualConverted + punctualityScore + completionScore;
-  const finalScore = +(total20 / 4).toFixed(1); // convert back to 5
+  const finalScore = +(total20 / 4).toFixed(1); // back to 5 scale
 
   const ratingData = {
     fromUserId: userId,
     toUserId: employeeId,
     jobId,
     branchType: job.branch || '',
-    manualRating: {
-      score: ratingInput.score,
-      comment: ratingInput.comment || ''
+    criteria: {
+      ...criteria,
+      punctuality: punctualityScore,
+      job_completion: completionScore,
     },
-    systemRating: [
-      { metric: 'punctuality', score: punctualityScore },
-      { metric: 'completion', score: completionScore }
-    ],
-    totalScore: finalScore
+    comment,
+    targetRole: 'employee',
+    totalScore: finalScore,
   };
 
-  await ratingDB.createRating(ratingData);
+  const created = await ratingDB.createRating(ratingData);
+  if (!created) return { success: false, message: 'Already rated' };
+
   await userDB.updateEmployeeAverageRating(employeeId);
 
   const allRated = await checkIfAllEmployersRated(jobId);
@@ -156,27 +164,37 @@ if (jobProgress?.startedAt && job.workStartTime) {
   return { success: true, message: 'Employee rated', data: ratingData };
 };
 
-const rateEmployer = async (userId, employerId, ratingInput, jobId) => {
+
+const rateEmployer = async (userId, employerId, criteria, comment, jobId) => {
   const job = await jobDB.getJobById(jobId);
+
   const ratingData = {
-    jobId: jobId,
-    fromUserId : userId,
+    fromUserId: userId,
     toUserId: employerId,
-    branchType: job.branch || "",
-    manualRating: {
-      score: ratingInput.score,
-      comment: ratingInput.comment || ''
-    }
-  }
-  await ratingDB.createRating(ratingData);
+    jobId,
+    branchType: job.branch || '',
+    criteria,
+    comment,
+    targetRole: 'employer',
+    totalScore: Object.values(criteria).length
+      ? +(Object.values(criteria).reduce((a, b) => a + b, 0) / Object.values(criteria).length).toFixed(1)
+      : 0,
+  };
+
+  const created = await ratingDB.createRating(ratingData);
+  if (!created) return { success: false, message: 'Already rated' };
+
   await userDB.updateEmployerAverageRating(employerId);
+
   const allRated = await checkIfAllEmployersRated(jobId);
   if (allRated) {
     await jobDB.updateJobStatus(jobId, 'completed');
     await autoRateUnratedEmployees(jobId);
   }
-  return { success: true, message: 'Employer rated' };
+
+  return { success: true, message: 'Employer rated', data: ratingData };
 };
+
 
 const checkIfAllEmployersRated = async (jobId) => {
   // 1. job-д хамаарах 'paid' төлөвтэй payments-ийг авна

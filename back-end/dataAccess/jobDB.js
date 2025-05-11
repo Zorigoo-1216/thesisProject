@@ -15,7 +15,7 @@ const createJob = async (jobData) => {
 
 // hereglegchiin uusgesen zariin jagsaaltiig haruulah
 const getUserPostedJobHistory = async (userId) => {
-    const jobs = await Job.find({employerId: userId, status: { $ne: 'closed' }});
+    const jobs = await Job.find({employerId: userId, status: { $ne: 'closed' } });
     const userJobs = await Promise.all(jobs.map(async (job) => {
         const applications = await Application.find({ jobId: job._id });
         const employees = await User.find({ _id: { $in: job.employees } });
@@ -35,16 +35,20 @@ const getdJoblist = async () => {
     return jobs;
 }
 
-// ajliin zar filter eer haih
-const findJobsByQuery = async (query) => {
-  const jobs = await Job.find(query).sort({ createdAt: -1 });
 
-  // 👇 заавал employerId-тай job-уудыг үр дүнгээр үлдээх
-  // const safeJobs = jobs.filter(job => job.employerId && job._id);
-  
-  // return safeJobs.map(job => new viewJobDTO(job));
-  return jobs;
+/**
+ * Finds jobs by a given query.
+ * 
+ * @param {Object} query - The MongoDB query to filter the jobs by.
+ * @returns {Promise<Object[]>} A promise resolving to an array of Job objects.
+ * 
+ * @note The query is sorted by the createdAt field in descending order (newest first).
+ */
+const findJobsByQuery = async (query) => {
+   return await Job.find(query).sort({ createdAt: -1 });
   };
+
+
 // ajliin zar iig id-aar avah
 const getJobById = async (id) => {
     return await Job.findById(id);
@@ -97,9 +101,9 @@ const getJobLisForUser = async (user, filters) => {
     return await Job.findByIdAndUpdate(jobId, { status: 'deleted' });
   }
   const getMyPostedJobs = async (userId) => {
-    //const userObjectId = new mongoose.Types.ObjectId(userId);
-    const jobs = await Job.find({ employerId: userId, status: { $ne: 'closed' } });
-    return jobs;
+  const endDate = new Date();
+   return await Job.find({ employerId: userId, status: { $ne: 'deleted', $ne: 'completed' }, endDate: { $gte: endDate } });
+    
   }
   const getEmployeesByJob = async (jobId) => {
     const job = await Job.findById(jobId);

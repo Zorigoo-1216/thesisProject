@@ -332,9 +332,14 @@ class _JobContractScreenState extends State<JobContractScreen>
                                       : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
+                                    //isChecked ? AppColors.primary : Colors.grey,
                                     isChecked ? AppColors.primary : Colors.grey,
+                                foregroundColor: Colors.white,
                               ),
-                              child: const Text("Батлах"),
+                              child: const Text(
+                                "Батлах",
+                                //style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ),
                         ],
@@ -365,8 +370,14 @@ class _JobContractScreenState extends State<JobContractScreen>
                   child: const Text("Үгүй"),
                 ),
                 ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                  ),
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text("Тийм"),
+                  child: const Text(
+                    "Тийм",
+                    style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ],
             );
@@ -391,7 +402,9 @@ class _JobContractScreenState extends State<JobContractScreen>
               return Card(
                 margin: const EdgeInsets.symmetric(vertical: 8),
                 child: ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                  leading: const CircleAvatar(
+                    backgroundImage: AssetImage('assets/images/avatar.png'),
+                  ),
                   title: Text(user.name),
                   subtitle: Text("Утас: ${user.phone ?? 'Мэдэгдэхгүй'}"),
                 ),
@@ -412,7 +425,10 @@ class _JobContractScreenState extends State<JobContractScreen>
               backgroundColor: AppColors.primary,
               minimumSize: const Size(double.infinity, 48),
             ),
-            child: const Text("Гэрээ илгээх"),
+            child: const Text(
+              "Гэрээ илгээх",
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ),
       ],

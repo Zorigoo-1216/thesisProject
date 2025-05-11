@@ -108,15 +108,25 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                         child: const Text("Дараа"),
                       ),
                       ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                        ),
                         onPressed: () {
                           Navigator.of(context).pop();
                           Navigator.pushNamed(
                             context,
                             '/rate-employee',
-                            arguments: widget.jobId,
+                            arguments: {
+                              'jobId':
+                                  widget
+                                      .jobId, // 🔄 String утгыг map дотор оруулж байна
+                            },
                           );
                         },
-                        child: const Text("Үнэлгээ өгөх"),
+                        child: const Text(
+                          "Үнэлгээ өгөх",
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ],
                   ),
@@ -173,7 +183,10 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                     ),
-                    child: const Text("Гэрээ үүсгэх"),
+                    child: const Text(
+                      "Гэрээ үүсгэх",
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),
@@ -200,9 +213,9 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
     );
 
     if (response.statusCode == 200) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Цалин амжилттай шилжлээ")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Ажлын гүйцэтгэлийг баталгаажууллаа")),
+      );
       await fetchPayments();
       setState(() => selecting = false);
     } else {
@@ -339,17 +352,73 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
 
   Widget _buildList() {
     final list = filtered;
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: list.length,
-      itemBuilder: (context, index) {
-        final worker = list[index];
-        return WorkerCard(
-          worker: worker,
-          showCheckbox: selecting,
-          onChanged: (val) => setState(() => worker.selected = val ?? false),
-        );
-      },
+
+    if (list.isEmpty) {
+      return const Center(child: Text("Одоогоор мэдээлэл алга"));
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: list.length,
+            itemBuilder: (context, index) {
+              final worker = list[index];
+              return WorkerCard(
+                worker: worker,
+                showCheckbox: selecting,
+                onChanged:
+                    (val) => setState(() => worker.selected = val ?? false),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child:
+              selecting
+                  ? Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                          ),
+                          onPressed: _confirmSelected,
+                          child: const Text(
+                            "Батлах",
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: resetSelection,
+                          child: const Text("Цуцлах"),
+                        ),
+                      ),
+                    ],
+                  )
+                  : ElevatedButton(
+                    onPressed: () => setState(() => selecting = true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      minimumSize: const Size.fromHeight(48), // өндөр
+                    ),
+                    child: const SizedBox(
+                      width: double.infinity,
+                      child: Center(
+                        child: Text(
+                          "Сонгох",
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+        ),
+      ],
     );
   }
 
@@ -366,10 +435,12 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
             itemCount: allPayments.length,
             itemBuilder: (context, index) {
               final payment = allPayments[index];
+
               return PaymentCard(
                 payment: payment,
                 showCheckbox: selecting,
                 selected: payment.selected,
+
                 onChanged: (val) {
                   setState(() => payment.selected = val ?? false);
                 },
@@ -385,8 +456,14 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                     children: [
                       Expanded(
                         child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                          ),
                           onPressed: _confirmPayments,
-                          child: const Text("Батлах"),
+                          child: const Text(
+                            "Батлах",
+                            style: TextStyle(fontSize: 16, color: Colors.white),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -410,7 +487,15 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                     ),
-                    child: const Text("Сонгох"),
+                    child: const SizedBox(
+                      width: double.infinity,
+                      child: Center(
+                        child: Text(
+                          "Сонгох",
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                    ),
                   ),
         ),
       ],

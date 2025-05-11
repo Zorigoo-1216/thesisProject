@@ -11,6 +11,7 @@ const notificationSchema = new mongoose.Schema({
     enum: ['job_match', 'contract_update', 'payment', 'rating', 'system_alert', 'interview_schedule', "application_received"]
   },
   tags: [String], // жишээ: ['urgent', 'new_branch', 'disabled_friendly']
+  isDeleted: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

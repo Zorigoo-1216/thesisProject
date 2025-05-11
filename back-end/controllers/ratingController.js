@@ -82,17 +82,17 @@ const rateEmployee = async (req, res) => {
     try {
         const userId = req.user.id;
         const jobId = req.params.jobId;
-
-        const { employeeId, rating } = req.body;
-    
-        const result = await ratingService.rateEmployee(userId, employeeId, rating, jobId);
-    
-      
-    
+        const { employeeId, criteria, comment } = req.body;
+        const result = await ratingService.rateEmployee(
+          userId,
+          employeeId,
+          criteria,
+          comment,
+          jobId
+        );
         if (result.success) {
           return res.status(201).json({ success: true, message: 'Rating created successfully', data: result.data });
         }
-    
         return res.status(400).json({ success: false, message: result.message });
     }
     catch (error) {
@@ -105,11 +105,14 @@ const rateEmployer = async (req, res) => {
   try {
     const userId = req.user.id;
     const jobId = req.params.jobId;
-
-    const { employerId, rating } = req.body;
-
-    const result = await ratingService.rateEmployer(userId, employerId, rating, jobId);
-
+    const { employerId, criteria, comment } = req.body;
+    const result = await ratingService.rateEmployer(
+      userId,
+      employerId,
+      criteria,
+      comment,
+      jobId
+    );
     if (!result.success) {
       return res.status(400).json({ success: false, message: result.message });
     }

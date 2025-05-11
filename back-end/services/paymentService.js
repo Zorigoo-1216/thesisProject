@@ -82,7 +82,7 @@ const transferMultipleSalaries = async (paymentIds, employerId) => {
         continue;
       }
 
-      if (payment.employeeId.toString() !== employerId.toString()) {
+      if (payment.employerId.toString() !== employerId.toString()) {
         console.warn(`⚠️ Unauthorized attempt for payment ${id}`);
         continue;
       }

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constant/styles.dart';
 import '../../constant/api.dart';
 import '../../models/job_model.dart';
+import '../../models/user_model.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final Job job;
@@ -17,9 +18,7 @@ class JobDetailScreen extends StatefulWidget {
 }
 
 class _JobDetailScreenState extends State<JobDetailScreen> {
-  Map<String, dynamic>? employerInfo;
-  List<Map<String, dynamic>> employerComments = [];
-
+  UserModel? employerUser;
   bool isLoading = true;
   bool applied = false;
   bool applying = false;
@@ -29,49 +28,30 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     super.initState();
     applied = widget.job.isApplied;
     fetchEmployerInfo();
-    fetchEmployerComments();
   }
 
   Future<void> fetchEmployerInfo() async {
-    final employerId = widget.job.employerId;
-    final uri = Uri.parse('${baseUrl}auth/getuserinfo/$employerId');
+    final uri = Uri.parse('${baseUrl}jobs/${widget.job.jobId}/employer');
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
 
     try {
-      final response = await http.get(uri);
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
-          employerInfo = data['employer'] ?? {};
+          employerUser = UserModel.fromJson(data['employer']);
           isLoading = false;
         });
       } else {
-        print("❌ Error fetching employer info: ${response.statusCode}");
         setState(() => isLoading = false);
       }
     } catch (e) {
-      print("❌ Exception fetching employer info: $e");
       setState(() => isLoading = false);
-    }
-  }
-
-  Future<void> fetchEmployerComments() async {
-    final employerId = widget.job.employerId;
-    final uri = Uri.parse('${baseUrl}ratings/$employerId/comments');
-
-    try {
-      final response = await http.get(uri);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          employerComments = List<Map<String, dynamic>>.from(
-            data['comments'] ?? [],
-          );
-        });
-      } else {
-        print("❌ Error fetching comments: ${response.statusCode}");
-      }
-    } catch (e) {
-      print("❌ Exception while fetching comments: $e");
     }
   }
 
@@ -81,9 +61,8 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final jobId = widget.job.jobId;
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    final userId = prefs.getString('userId');
 
-    if (token == null || userId == null) {
+    if (token == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Нэвтрэх шаардлагатай')));
@@ -114,7 +93,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       if (response.statusCode == 200) {
         setState(() => applied = !applied);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(applied ? 'Хүсэлт илгээгдлээ' : 'Цуцаллаа')),
+          SnackBar(content: Text(applied ? 'Илгээсэн' : 'Цуцлагдлаа')),
         );
       } else {
         final error = jsonDecode(response.body)['error'] ?? 'Алдаа гарлаа';
@@ -123,7 +102,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
         ).showSnackBar(SnackBar(content: Text(error)));
       }
     } catch (e) {
-      print("❌ Error submitting application: $e");
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Сүлжээний алдаа')));
@@ -163,7 +141,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                     children: [
                       const CircleAvatar(
                         radius: 24,
-                        backgroundImage: AssetImage('assets/images/user.png'),
+                        backgroundImage: AssetImage('assets/images/avatar.png'),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -177,7 +155,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                               ),
                             ),
                             Text(job.title),
-                            const SizedBox(height: 4),
                             Row(
                               children: [
                                 const Icon(
@@ -192,7 +169,6 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
                             Text(
                               job.salary.getSalaryFormatted(),
                               style: const TextStyle(color: Colors.blue),
@@ -205,28 +181,22 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
                 ),
               ),
             ),
-
             const TabBar(
               labelColor: AppColors.primary,
               unselectedLabelColor: Colors.black,
               indicatorColor: AppColors.primary,
-              tabs: [
-                Tab(text: 'Ажлын мэдээлэл'),
-                Tab(text: 'Ажил олгогчийн мэдээлэл'),
-              ],
+              tabs: [Tab(text: 'Ажлын мэдээлэл'), Tab(text: 'Ажил олгогч')],
             ),
-
             Expanded(
               child: TabBarView(
                 children: [
                   _jobInfoTab(job),
                   isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : _employerInfoTab(employerInfo ?? {}, employerComments),
+                      : _employerInfoTabFromUserModel(employerUser),
                 ],
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: SizedBox(
@@ -271,137 +241,137 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
           ),
           const SizedBox(height: 16),
           const Text("Ажлын шаардлага", style: AppTextStyles.heading),
-          const SizedBox(height: 8),
           Text("Цалин: ${job.salary.getSalaryFormatted()}"),
           Text("Эхлэх: ${job.startDate}"),
           Text("Дуусах: ${job.endDate}"),
           const SizedBox(height: 16),
           const Text("Шаардлагууд", style: AppTextStyles.heading),
           const SizedBox(height: 8),
-          ...job.requirements.map((r) => Text("- $r")).toList(),
+          ...job.requirements.map((r) => Text("- $r")),
         ],
       ),
     );
   }
 
-  static Widget _employerInfoTab(
-    Map<String, dynamic> data,
-    List<Map<String, dynamic>> comments,
-  ) {
+  static Widget _employerInfoTabFromUserModel(UserModel? user) {
+    if (user == null) return const Text("Мэдээлэл олдсонгүй");
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: ListView(
         children: [
           Row(
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 32,
-                backgroundImage: AssetImage('assets/images/user.png'),
+                backgroundImage:
+                    user.avatar != null && user.avatar!.isNotEmpty
+                        ? NetworkImage(user.avatar!) as ImageProvider
+                        : const AssetImage('assets/images/avatar.png'),
               ),
               const SizedBox(width: 16),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    data['name'] ?? '',
+                    user.name,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
                   ),
-                  if (data['type'] != null) Text(data['type']),
-                  const SizedBox(height: 4),
-                  if (data['rating'] != null || data['jobCount'] != null)
-                    Row(
-                      children: [
-                        if (data['rating'] != null) ...[
-                          const Icon(
-                            Icons.star,
-                            color: Colors.orange,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            "${data['rating']}",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                        if (data['jobCount'] != null) ...[
-                          const SizedBox(width: 8),
-                          Text("Нийт ажил: ${data['jobCount']}"),
-                        ],
-                      ],
-                    ),
+                  Text("Төрөл: ${user.role}"),
+                  if (user.phone != null && user.phone!.isNotEmpty)
+                    Text("Утас: ${user.phone}"),
                 ],
               ),
             ],
           ),
           const SizedBox(height: 16),
-          if (data['phone'] != null && data['phone'].toString().isNotEmpty) ...[
-            const Text("Холбоо барих", style: AppTextStyles.heading),
-            const SizedBox(height: 4),
-            Text("Утас: ${data['phone']}"),
-          ],
-          const SizedBox(height: 16),
-          if (comments.isNotEmpty) ...[
-            const Text("Сэтгэгдэл", style: AppTextStyles.heading),
+
+          if (user.profile != null) ...[
+            const Text("Байршил ба туршлага", style: AppTextStyles.heading),
             const SizedBox(height: 8),
-            ...comments.map((c) {
-              final user = c['user'] ?? "Нэргүй";
-              final rating = c['rating']?.toString() ?? "0";
-              final text = c['text'] ?? "";
-              return _commentCard(user, rating, text);
-            }).toList(),
+            if (user.profile!.location != null &&
+                user.profile!.location!.isNotEmpty)
+              Text("Байршил: ${user.profile!.location}"),
+            if (user.profile!.mainBranch != null &&
+                user.profile!.mainBranch!.isNotEmpty)
+              Text("Үндсэн салбар: ${user.profile!.mainBranch}"),
+            if (user.profile!.experienceLevel != null &&
+                user.profile!.experienceLevel!.isNotEmpty)
+              Text("Туршлагын түвшин: ${user.profile!.experienceLevel}"),
+            const SizedBox(height: 16),
           ],
+
+          Text(
+            "Нийт үнэлгээ: ⭐ ${user.averageRatingForEmployer.overall} (${user.averageRatingForEmployer.totalRatings} үнэлгээ)",
+            style: AppTextStyles.heading,
+          ),
+          const SizedBox(height: 8),
+
+          const Text("Үнэлгээний дэлгэрэнгүй", style: AppTextStyles.heading),
+          const SizedBox(height: 8),
+          ...user.averageRatingForEmployer.criteria.entries.map((entry) {
+            return Row(
+              children: [
+                Expanded(
+                  child: Text("• ${_localizedEmployerLabel(entry.key)}"),
+                ),
+                Text("${entry.value} ⭐"),
+              ],
+            );
+          }),
+
+          const SizedBox(height: 16),
+          if (user.ratingCriteriaForEmployer.isNotEmpty) ...[
+            const Text("Ажилчдын сэтгэгдэл", style: AppTextStyles.heading),
+            const SizedBox(height: 8),
+            ...user.ratingCriteriaForEmployer.map((e) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...e.criteria.entries.map((entry) {
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "• ${_localizedEmployerLabel(entry.key)}",
+                            ),
+                          ),
+                          Text("${entry.value} ⭐"),
+                        ],
+                      );
+                    }),
+                    if (e.comment.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text("💬 ${e.comment}"),
+                    ],
+                    const Divider(),
+                  ],
+                ),
+              );
+            }),
+          ] else
+            const Text("Ажилчдаас үнэлгээ хараахан ирээгүй байна"),
         ],
       ),
     );
   }
 
-  static Widget _commentCard(String name, String rating, String comment) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade100,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const CircleAvatar(
-            radius: 20,
-            backgroundImage: AssetImage('assets/images/avatar.png'),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      "$rating ⭐",
-                      style: const TextStyle(
-                        color: Colors.orange,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(comment, style: const TextStyle(fontSize: 13)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  static String _localizedEmployerLabel(String key) {
+    const labels = {
+      'employee_relationship': 'Ажилчдын харилцаа',
+      'salary_fairness': 'Цалингийн шударга байдал',
+      'work_environment': 'Ажлын орчин',
+      'growth_opportunities': 'Өсөлтийн боломж',
+      'workload_management': 'Ачааллын зохицуулалт',
+      'leadership_style': 'Удирдлагын арга барил',
+      'decision_making': 'Шийдвэр гаргалт',
+      'legal_compliance': 'Хуулийн дагаж мөрдөлт',
+    };
+    return labels[key] ?? key;
   }
 }

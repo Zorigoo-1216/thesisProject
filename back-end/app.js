@@ -7,11 +7,13 @@ const contractRoutes = require('./routes/contractRoutes');
 const jobprogressRoutes = require('./routes/jobProgressRoutes');
 const paymentRoutes = require('./routes/paymentRoute');
 const ratingRoutes = require('./routes/ratingRoute');
+
 const cors = require('cors');
 
 require('dotenv').config();
 
 const app = express();
+
 
 // Connect to DB
 connectDB();

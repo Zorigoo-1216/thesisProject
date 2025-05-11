@@ -18,11 +18,32 @@ class RateEmployeeScreen extends StatefulWidget {
 class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
   List<RateWorker> workers = [];
   List<bool> isExpanded = [];
-  List<double> ratings = [];
   List<bool> isRated = [];
   List<TextEditingController> commentControllers = [];
+  List<Map<String, double>> ratings = [];
   bool loading = true;
-  String jobType = '';
+
+  final List<String> criteriaKeys = [
+    'speed',
+    'performance',
+    'quality',
+    'time_management',
+    'stress_management',
+    'learning_ability',
+    'ethics',
+    'communication',
+  ];
+
+  final Map<String, String> criteriaLabels = {
+    'speed': 'Хурд',
+    'performance': 'Гүйцэтгэл',
+    'quality': 'Чанар',
+    'time_management': 'Цагийн менежмент',
+    'stress_management': 'Стрессийн менежмент',
+    'learning_ability': 'Суралцах чадвар',
+    'ethics': 'Ёс зүй',
+    'communication': 'Харилцаа',
+  };
 
   @override
   void initState() {
@@ -46,16 +67,15 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
         setState(() {
           workers = list.map((e) => RateWorker.fromJson(e)).toList();
           isExpanded = List.generate(workers.length, (_) => false);
-          ratings = List.generate(workers.length, (_) => 0.0);
           isRated = List.generate(workers.length, (_) => false);
           commentControllers = List.generate(
             workers.length,
             (_) => TextEditingController(),
           );
-          // ⬇️ энд нэмнэ:
-          if (list.isNotEmpty && list[0]['jobType'] != null) {
-            jobType = list[0]['jobType']; // jobType-г авч хадгална
-          }
+          ratings = List.generate(
+            workers.length,
+            (_) => Map.fromEntries(criteriaKeys.map((k) => MapEntry(k, 0.0))),
+          );
           loading = false;
         });
       } else {
@@ -68,9 +88,11 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
     }
   }
 
-  void handleRating(int index, double rating) {
-    if (isRated[index]) return;
-    setState(() => ratings[index] = rating);
+  void handleRating(int workerIndex, String key, double value) {
+    if (isRated[workerIndex]) return;
+    setState(() {
+      ratings[workerIndex][key] = value;
+    });
   }
 
   Future<void> submitRating(int index) async {
@@ -80,19 +102,20 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
     final token = prefs.getString('token') ?? '';
     final worker = workers[index];
 
-    final score = ratings[index];
     final comment = commentControllers[index].text;
+    final Map<String, double> ratingData = ratings[index];
 
-    if (score == 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Оноо өгнө үү")));
+    if (ratingData.values.every((v) => v == 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Бүх шалгуурт үнэлгээ өгнө үү")),
+      );
       return;
     }
 
     final body = jsonEncode({
       'employeeId': worker.id,
-      'rating': {'score': score, 'comment': comment, 'branchType': ""},
+      'criteria': ratingData,
+      'comment': comment,
     });
 
     try {
@@ -128,20 +151,23 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
     }
   }
 
-  Widget buildStarRow(int index) {
+  Widget buildCriteriaRow(int index, String key, String label) {
     return Row(
-      children: List.generate(5, (i) {
-        return IconButton(
-          onPressed: () => handleRating(index, i + 1),
-          icon: Icon(
-            Icons.star,
-            color:
-                ratings[index] >= i + 1
-                    ? AppColors.primary
-                    : Colors.grey.shade300,
-          ),
-        );
-      }),
+      children: [
+        Expanded(child: Text(label)),
+        ...List.generate(5, (i) {
+          return IconButton(
+            icon: Icon(
+              Icons.star,
+              color:
+                  ratings[index][key]! >= i + 1
+                      ? AppColors.primary
+                      : Colors.grey.shade300,
+            ),
+            onPressed: () => handleRating(index, key, (i + 1).toDouble()),
+          );
+        }),
+      ],
     );
   }
 
@@ -230,11 +256,11 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                buildStarRow(index),
-                                                Text(
-                                                  "${ratings[index]} оноо",
-                                                  style: const TextStyle(
-                                                    color: AppColors.subtitle,
+                                                ...criteriaKeys.map(
+                                                  (key) => buildCriteriaRow(
+                                                    index,
+                                                    key,
+                                                    criteriaLabels[key]!,
                                                   ),
                                                 ),
                                                 const SizedBox(height: 8),

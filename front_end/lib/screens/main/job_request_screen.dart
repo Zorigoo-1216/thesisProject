@@ -118,8 +118,13 @@ class _JobRequestScreenState extends State<JobRequestScreen>
           .whereType<Map<String, dynamic>>()
           .map((item) {
             try {
-              if (endpoint == 'applications' && item.containsKey('user')) {
+              if ((endpoint == 'applications' ||
+                      endpoint == 'candidates' ||
+                      endpoint == 'interviews') &&
+                  item.containsKey('user')) {
                 final rated = RatedUserModel.fromJson(item);
+                print("🔥 RatedUserModel parsed user.id: ${rated.user.id}");
+
                 return rated.user;
               } else {
                 return UserModel.fromJson(item);
@@ -196,7 +201,10 @@ class _JobRequestScreenState extends State<JobRequestScreen>
           );
         }
       } else {
-        final error = jsonDecode(response.body)['error'] ?? 'Алдаа гарлаа';
+        final decoded = jsonDecode(response.body);
+        final errorValue = decoded['error'];
+        final error = errorValue?.toString() ?? 'Алдаа гарлаа';
+
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error)));
@@ -210,6 +218,7 @@ class _JobRequestScreenState extends State<JobRequestScreen>
   }
 
   Widget buildUserCard(UserModel user) {
+    print("👀 JobRequestCard rendering user: ${user.id}, ${user.name}");
     return JobRequestCard(
       user: user,
       showCheckbox: isSelecting,
@@ -270,7 +279,10 @@ class _JobRequestScreenState extends State<JobRequestScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,
                             ),
-                            child: const Text("Батлах"),
+                            child: const Text(
+                              "Батлах",
+                              style: TextStyle(color: AppColors.white),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),

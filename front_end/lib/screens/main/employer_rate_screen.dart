@@ -60,7 +60,8 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
 
     final body = jsonEncode({
       'employerId': employer!['id'],
-      'rating': {'score': selectedRating, 'comment': comment, 'branchType': ""},
+      'criteria': {'employee_relationship': selectedRating},
+      'comment': comment,
     });
 
     try {

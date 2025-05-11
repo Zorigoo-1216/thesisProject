@@ -175,8 +175,14 @@ class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
                               children: [
                                 Expanded(
                                   child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                    ),
                                     onPressed: markAsPaid,
-                                    child: const Text("Цалин өгсөн"),
+                                    child: const Text(
+                                      "Цалин өгсөн",
+                                      style: TextStyle(color: Colors.white),
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),

@@ -23,7 +23,7 @@ class _EmployeeWorkProgressScreenState
   bool hasContract = false;
   Worker? worker;
   Timer? salaryTimer;
-
+  String jobTitle = 'Ажлын нэр оруулаагүй';
   @override
   void initState() {
     super.initState();
@@ -71,6 +71,19 @@ class _EmployeeWorkProgressScreenState
     final userId = prefs.getString('userId') ?? '';
     final phone = prefs.getString('phone') ?? '';
 
+    // 🟢 Эхлээд ажлын мэдээллийг аваад title-г онооно
+    final jobRes = await http.get(
+      Uri.parse('${baseUrl}jobs/${widget.jobId}'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (jobRes.statusCode == 200) {
+      final jobData = jsonDecode(jobRes.body);
+      setState(() {
+        jobTitle = jobData['job']?['data']?['title'] ?? jobTitle;
+      });
+    }
+
+    // 🔄 Ажлын явцын мэдээллийг авна
     final res = await http.get(
       Uri.parse('${baseUrl}jobprogress/${widget.jobId}/my-progress'),
       headers: {'Authorization': 'Bearer $token'},
@@ -102,22 +115,10 @@ class _EmployeeWorkProgressScreenState
         salaryTimer?.cancel();
       }
     } else if (res.statusCode == 404) {
-      // ✳️ Get job info to show its title
-      final jobRes = await http.get(
-        Uri.parse('${baseUrl}jobs/${widget.jobId}'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
-      String jobTitle = 'Ажлын нэр оруулаагүй';
-      if (jobRes.statusCode == 200) {
-        final jobData = jsonDecode(jobRes.body);
-        jobTitle = jobData['title'] ?? jobTitle;
-      }
-
       setState(() {
         worker = Worker(
           id: userId,
-          name: jobTitle,
+          name: '',
           phone: phone,
           rating: 0,
           projects: 0,
@@ -182,7 +183,7 @@ class _EmployeeWorkProgressScreenState
               backgroundImage: AssetImage('assets/images/avatar.png'),
             ),
             const SizedBox(width: 8),
-            Expanded(child: Text(worker!.name, style: AppTextStyles.heading)),
+            Expanded(child: Text(jobTitle, style: AppTextStyles.heading)),
           ],
         ),
         const SizedBox(height: 8),
@@ -227,7 +228,10 @@ class _EmployeeWorkProgressScreenState
       return ElevatedButton(
         onPressed: _showStartDialog,
         style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-        child: const Text("Ажил эхлүүлэх"),
+        child: const Text(
+          "Ажил эхлүүлэх",
+          style: TextStyle(color: Colors.white, fontSize: 16),
+        ),
       );
     }
 
@@ -247,16 +251,28 @@ class _EmployeeWorkProgressScreenState
       context: context,
       builder:
           (_) => AlertDialog(
-            title: const Text("Ажил эхлүүлэх үү?"),
-            content: const Text("Та ажлаа эхлүүлэхдээ итгэлтэй байна уу?"),
+            title: const Text(
+              "Ажил эхлүүлэх хүсэлт илгээх үү?",
+              style: TextStyle(fontSize: 18),
+            ),
+            content: const Text(
+              "Та ажил эхлүүлэх хүсэлт илгээхдээ итгэлтэй байна уу?",
+              style: TextStyle(fontSize: 15),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text("Үгүй"),
               ),
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                ),
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text("Тийм"),
+                child: const Text(
+                  "Тийм",
+                  style: TextStyle(color: AppColors.white),
+                ),
               ),
             ],
           ),
@@ -284,9 +300,9 @@ class _EmployeeWorkProgressScreenState
     if (response.statusCode == 200) {
       await loadProgress();
       startSalaryPolling();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Ажил эхэллээ')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ажил эхлүүлэх хүсэлт илгээлээ')),
+      );
     } else {
       debugPrint("❌ Start job failed: ${response.body}");
     }

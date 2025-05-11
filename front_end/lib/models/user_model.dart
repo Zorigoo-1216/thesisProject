@@ -13,6 +13,9 @@ class UserModel {
   final String? state;
   final Profile? profile;
   final AverageRating averageRating;
+  final AverageRatingForEmployer averageRatingForEmployer;
+  final List<Review> reviews;
+  final List<EmployerRating> ratingCriteriaForEmployer;
 
   UserModel({
     required this.id,
@@ -29,10 +32,12 @@ class UserModel {
     this.state,
     this.profile,
     required this.averageRating,
+    required this.averageRatingForEmployer,
+    this.reviews = const [],
+    this.ratingCriteriaForEmployer = const [],
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    print("🧪 UserModel JSON: $json");
     final rawId = json['id'] ?? json['_id'];
     final id = rawId != null ? rawId.toString() : '';
 
@@ -54,6 +59,17 @@ class UserModel {
       profile:
           json['profile'] != null ? Profile.fromJson(json['profile']) : null,
       averageRating: AverageRating.fromJson(json['averageRating'] ?? {}),
+      averageRatingForEmployer: AverageRatingForEmployer.fromJson(
+        json['averageRatingForEmployer'] ?? {},
+      ),
+      reviews:
+          (json['reviews'] as List? ?? [])
+              .map((e) => Review.fromJson(e))
+              .toList(),
+      ratingCriteriaForEmployer:
+          (json['ratingCriteriaForEmployer'] as List? ?? [])
+              .map((e) => EmployerRating.fromJson(e))
+              .toList(),
     );
   }
 }
@@ -63,7 +79,7 @@ class Profile {
   final String? identityNumber;
   final String? location;
   final String? mainBranch;
-  final double? waitingSalaryPerHour;
+  final double waitingSalaryPerHour;
   final List<String> driverLicense;
   final List<String> skills;
   final List<String> additionalSkills;
@@ -76,7 +92,7 @@ class Profile {
     this.identityNumber,
     this.location,
     this.mainBranch,
-    this.waitingSalaryPerHour,
+    required this.waitingSalaryPerHour,
     this.driverLicense = const [],
     this.skills = const [],
     this.additionalSkills = const [],
@@ -105,19 +121,22 @@ class Profile {
 class AverageRating {
   final double overall;
   final List<BranchRating> byBranch;
+  final Map<String, num> criteria;
 
-  AverageRating({required this.overall, required this.byBranch});
+  AverageRating({
+    required this.overall,
+    required this.byBranch,
+    required this.criteria,
+  });
 
   factory AverageRating.fromJson(Map<String, dynamic> json) {
     return AverageRating(
-      overall:
-          (json['overall'] is int)
-              ? (json['overall'] as int).toDouble()
-              : (json['overall'] ?? 0).toDouble(),
+      overall: (json['overall'] ?? 0).toDouble(),
       byBranch:
           (json['byBranch'] as List? ?? [])
               .map((e) => BranchRating.fromJson(e))
               .toList(),
+      criteria: Map<String, num>.from(json['criteria'] ?? {}),
     );
   }
 }
@@ -132,6 +151,75 @@ class BranchRating {
     return BranchRating(
       branchType: json['branchType'] ?? '',
       score: (json['score'] ?? 0).toDouble(),
+    );
+  }
+}
+
+class AverageRatingForEmployer {
+  final double overall;
+  final int totalRatings;
+  final Map<String, num> criteria;
+
+  AverageRatingForEmployer({
+    required this.overall,
+    required this.totalRatings,
+    required this.criteria,
+  });
+
+  factory AverageRatingForEmployer.fromJson(Map<String, dynamic> json) {
+    return AverageRatingForEmployer(
+      overall: (json['overall'] ?? 0).toDouble(),
+      totalRatings: json['totalRatings'] ?? 0,
+      criteria: Map<String, num>.from(json['criteria'] ?? {}),
+    );
+  }
+}
+
+class Review {
+  final String reviewerId;
+  final String reviewerRole;
+  final String comment;
+  final String createdAt;
+  final Map<String, num> criteria;
+
+  Review({
+    required this.reviewerId,
+    required this.reviewerRole,
+    required this.comment,
+    required this.createdAt,
+    required this.criteria,
+  });
+
+  factory Review.fromJson(Map<String, dynamic> json) {
+    return Review(
+      reviewerId: json['reviewerId'] ?? '',
+      reviewerRole: json['reviewerRole'] ?? '',
+      comment: json['comment'] ?? '',
+      createdAt: json['createdAt'] ?? '',
+      criteria: Map<String, num>.from(json['criteria'] ?? {}),
+    );
+  }
+}
+
+class EmployerRating {
+  final String reviewerId;
+  final String comment;
+  final String createdAt;
+  final Map<String, num> criteria;
+
+  EmployerRating({
+    required this.reviewerId,
+    required this.comment,
+    required this.createdAt,
+    required this.criteria,
+  });
+
+  factory EmployerRating.fromJson(Map<String, dynamic> json) {
+    return EmployerRating(
+      reviewerId: json['reviewerId'] ?? '',
+      comment: json['comment'] ?? '',
+      createdAt: json['createdAt'] ?? '',
+      criteria: Map<String, num>.from(json['criteria'] ?? {}),
     );
   }
 }

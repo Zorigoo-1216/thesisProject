@@ -43,9 +43,11 @@ const login = async (req, res) => {
 
 const getProfile = async (req, res) => {
   try {
+    
     const userId = req.user.id;
+    //console.log('📥 /getProfile GET :', userId);
     const result = await userService.getProfile(userId);
-
+    console.log('📤 /getProfile GET :', result);
     res.status(200).json({ success: true, data: result });
   } catch (err) {
     console.error('❌ Error in getProfile:', err.message);

@@ -5,6 +5,7 @@ const viewJobDTO = require("../viewModels/viewJobDTO"); // jobDTO
 const mongoose = require('mongoose');
 const applicationDB = require("../dataAccess/applicationDB"); // applicationDB
 const viewUserDTO = require("../viewModels/viewUserDTO");
+
 // ajliin zar uusgeh 
 const createJob = async (jobData, employerId) => {
   try {
@@ -18,11 +19,13 @@ const createJob = async (jobData, employerId) => {
     const eligibleUsers = await findEligibleUsers(job);
     console.log("✅ Eligible users found in jobservice:", eligibleUsers?.length || 0);
 
-    if (Array.isArray(eligibleUsers) && eligibleUsers.length > 0) {
-      await notifyEligibleUsers(job, eligibleUsers);
-    }
-
-    return { success: true, data: job };
+   if(eligibleUsers.length > 0){
+    const userIds = eligibleUsers.map(user => user._id);
+    await notificationService.sendNotification(userIds, 
+     { title: job.title, message: `${job.location} байршилд "${job.title}" ажил зарлагдлаа. Цалин: ${job.salary?.amount}₮/${job.salary?.type === 'hourly' ? 'цаг' : 'өдөр'}`, type: 'job_match' }
+    );
+   }
+    return  { success: true, data: job };
   } catch (error) {
     console.error("Error creating job:", error.message);
     return { success: false, message: error.message };
@@ -59,11 +62,49 @@ const findEligibleUsers = async (job) => {
 };
 
 // tohirson ajilchdad medegdel ilgeeh
-const notifyEligibleUsers = async (job, users) => {
-  await notificationService.sendBulkNotifications(users, job);
-};
 
-// ajliin jagsaaltiig default aar haruulah
+
+
+/**
+ * Gets the list of all jobs that the user has not posted and the user has not applied to.
+ * @param {string} userId - The ID of the user.
+ * @returns {Object} A JSON response with a "success" flag, a message and a "data" property containing the list of jobs.
+ * @throws {Error} If an internal server error occurs while getting the job list.
+ * 
+ * @apiParam {String} userId - The ID of the user.
+ * @apiSuccessExample {json} Success-Response:
+ * {
+ *   success: true,
+ *   message: "Job list fetched successfully",
+ *   data: [
+ *     {
+ *       _id: "5f9f1c7b5f9f1c7b5f9f1c7b",
+ *       title: "Job title",
+ *       description: "Job description",
+ *       salary: { amount: 10000, type: 'hourly' },
+ *       employer: { _id: "5f9f1c7b5f9f1c7b5f9f1c7b", name: "John Doe", email: "john@example.com" },
+ *       applications: [
+ *         {
+ *           _id: "5f9f1c7b5f9f1c7b5f9f1c7b",
+ *           userId: "5f9f1c7b5f9f1c7b5f9f1c7b",
+ *           jobId: "5f9f1c7b5f9f1c7b5f9f1c7b",
+ *           status: "pending",
+ *           createdAt: "2020-11-10T05:21:39.116Z",
+ *           updatedAt: "2020-11-10T05:21:39.116Z",
+ *           __v: 0
+ *         }
+ *       ],
+ *       applied: true
+ *     }
+ *   ]
+ * }
+ * 
+ * @apiErrorExample {json} Error-Response:
+ * {
+ *   success: false,
+ *   message: "Internal Server Error"
+ * }
+ */
 const getJobList = async (userId) => {
   try {
     const allJobs = await jobDB.getdJoblist();
@@ -85,11 +126,94 @@ const getJobList = async (userId) => {
   }
 };
 
+const getEmployerByJobId = async (jobId) =>{
+  try {
+    const job = await jobDB.getJobById(jobId);
+    console.log("job in jobservice",job);
+    const emp = await userDB.getUserById(job.employerId);
+    const employer = new viewUserDTO(emp);
+    return { success: true, data: employer };
+  } catch (error) {
+    console.error("Error getting employer:", error.message);
+    return { success: false, message: error.message };
+  }
+}
 
 
 
 
-// ajliin zar filter eer haih
+/**
+ * Searches for jobs based on query parameters.
+ * 
+ * @param {Object} filters - An object containing query filters.
+ * @param {String} [filters.title] - The title of the job to search for.
+ * @param {String} [filters.branchType] - The branch type to filter by.
+ * @param {String} [filters.location] - The location to filter by.
+ * @param {String} [filters.jobType] - The job type to filter by.
+ * @param {Boolean} [filters.possibleForDisabled] - Whether the job is possible for disabled people.
+ * @param {Number} [filters.salaryMin] - The minimum salary to filter by.
+ * @param {Number} [filters.salaryMax] - The maximum salary to filter by.
+ * @param {String} [filters.startDate] - The start date of the job to filter by.
+ * @param {String} [filters.endDate] - The end date of the job to filter by.
+ * 
+ * @return {Promise<Object>} - A promise that resolves to an object containing a success flag and an array of job objects.
+ * @property {Boolean} success - True if the job list was successfully fetched.
+ * @property {viewJobDTO[]} data - An array of job objects.
+ * 
+ * @apiSuccessExample {json} Success-Response:
+ * {
+ *   success: true,
+ *   data: [
+ *     {
+ *       _id: ObjectId,
+ *       title: String,
+ *       branchType: String,
+ *       location: String,
+ *       jobType: String,
+ *       salary: {
+ *         amount: Number,
+ *         currency: String
+ *       },
+ *       startDate: Date,
+ *       endDate: Date,
+ *       description: String,
+ *       requirements: [String],
+ *       possibleForDisabled: Boolean,
+ *       employerId: ObjectId,
+ *       employer: {
+ *         _id: ObjectId,
+ *         email: String,
+ *         phoneNumber: String,
+ *         password: String,
+ *         name: String,
+ *         profile: {
+ *           skills: [String],
+ *           mainBranch: String,
+ *           waitingSalaryPerHour: Number
+ *         },
+ *         __v: 0
+ *       },
+ *       applications: [
+ *         {
+ *           _id: ObjectId,
+ *           userId: ObjectId,
+ *           jobId: ObjectId,
+ *           status: String,
+ *           createdAt: Date,
+ *           __v: 0
+ *         }
+ *       ],
+ *       applied: true
+ *     }
+ *   ]
+ * }
+ * 
+ * @apiErrorExample {json} Error-Response:
+ * {
+ *   success: false,
+ *   message: "Internal Server Error"
+ * }
+ */
 const searchJobs = async (filters) => {
   try {
     const query = {
@@ -97,62 +221,73 @@ const searchJobs = async (filters) => {
       status: 'open',
     };
 
+    // Filter: Title (partial match)
     if (filters.title) {
       query.title = { $regex: filters.title, $options: 'i' };
     }
-    if (filters.branchType) {
-      query.branchType = filters.branchType;
-    }
-    if (filters.location) {
-      query.location = filters.location;
-    }
-    if (filters.jobType) {
-      query.jobType = filters.jobType;
-    }
+
+    // Filter: Exact match
+    if (filters.branchType) query.branchType = filters.branchType;
+    if (filters.location) query.location = filters.location;
+    if (filters.jobType) query.jobType = filters.jobType;
+
+    // Filter: Boolean - convert from string
     if (filters.possibleForDisabled !== undefined) {
-      query.possibleForDisabled = filters.possibleForDisabled;
+      query.possibleForDisabled = filters.possibleForDisabled === 'true';
     }
+
+    // Filter: Salary range
     if (filters.salaryMin || filters.salaryMax) {
       query["salary.amount"] = {};
-      if (filters.salaryMin) {
-        query["salary.amount"].$gte = filters.salaryMin;
-      }
-      if (filters.salaryMax) {
-        query["salary.amount"].$lte = filters.salaryMax;
-      }
+      if (filters.salaryMin) query["salary.amount"].$gte = Number(filters.salaryMin);
+      if (filters.salaryMax) query["salary.amount"].$lte = Number(filters.salaryMax);
     }
-    if (filters.startDate && filters.endDate) {
+
+    // Filter: Start and/or end dates
+    if (filters.startDate) {
       query.startDate = { $gte: new Date(filters.startDate) };
+    }
+    if (filters.endDate) {
       query.endDate = { $lte: new Date(filters.endDate) };
     }
 
+    // Fetch jobs
     const jobs = await jobDB.findJobsByQuery(query);
-    //console.log("searched jobs" , jobs);
-    const users = await userDB.getUsersByIds(jobs.map(job => job.employerId));
-    //console.log("searched users" , users);
-    const applications = await applicationDB.getApplicationFilteredByJobId(jobs.map(job => job._id), 'open');
-    //console.log("searched applications" , applications);
+
+    // Related employer info
+    const employerIds = jobs.map(job => job.employerId);
+    const users = await userDB.getUsersByIds(employerIds);
+
+    // Related applications (status optional: 'open')
+    const applications = await applicationDB.getApplicationFilteredByJobId(
+      jobs.map(job => job._id), 
+      filters.applicationStatus || null // optional second param
+    );
+
+    // Final data mapping
     const finalJobs = jobs.map(job => {
       const employer = users.find(u =>
-        u && u._id && job.employerId &&
-        u._id.toString() === job.employerId.toString()
+        u?._id?.toString() === job.employerId?.toString()
       );
-    
+
       const jobApplications = applications.filter(app =>
-        app && app.jobId && job._id &&
-        app.jobId.toString() === job._id.toString()
+        app?.jobId?.toString() === job._id?.toString()
       );
-    
-      return new viewJobDTO(job, jobApplications, employer);
+
+      return new viewJobDTO(
+        job,
+        jobApplications ?? [],
+        employer ?? null
+      );
     });
-    
-    // console.log("final jobs" , finalJobs);
+
     return { success: true, data: finalJobs };
   } catch (error) {
     console.error("Error searching jobs:", error.message);
     return { success: false, message: error.message };
   }
 };
+
 
 // ajliin zar iig id-aar avah
 const getJobById = async (jobId) => {
@@ -261,13 +396,8 @@ const deleteJob = async (jobId, userId, role) => {
 
 const getMyPostedJobs = async (userId) => {
   try {
-    //console.log("User ID received:", userId); // This logs the user ID being passed
-    //const userObjectId = new mongoose.Types.ObjectId(userId); // Convert string to ObjectId
-   // console.log("Converted ObjectId:", userId); // This logs the converted ObjectId
-    const jobs = await jobDB.getMyPostedJobs(userId); // Fetch jobs using the converted ObjectId
-    //const jobs = await Job.find({ employerId: userObjectId, status: { $ne: 'closed' } });
-   // console.log("Jobs fetched:", jobs); // This logs the fetched jobs
-
+    const jobs = await jobDB.getMyPostedJobs(userId); 
+  
     return jobs;
   } catch (error) {
     console.error("Error in getMyPostedJobs:", error); // This will log any errors encountered
@@ -299,7 +429,7 @@ const getSuitableWorkersByJob = async (jobId) => {
       branchRating = found?.score || 0;
 
       usersWithRating.push({
-        user: new UserDTO(user),
+        user: new viewUserDTO(user),
         rating: branchRating,
       });
     }
@@ -326,5 +456,6 @@ module.exports = {
   editJob,
   deleteJob,
   getMyPostedJobs,
-  getSuitableWorkersByJob
+  getSuitableWorkersByJob,
+  getEmployerByJobId
 };
