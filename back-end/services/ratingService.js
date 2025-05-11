@@ -153,9 +153,9 @@ const rateEmployee = async (userId, employeeId, criteria, comment, jobId) => {
 
   const created = await ratingDB.createRating(ratingData);
   if (!created) return { success: false, message: 'Already rated' };
-
+  
   await userDB.updateEmployeeAverageRating(employeeId);
-
+  await userDB.updateEmployeeBranchReview(employeeId, job.branch, ratingData.criteria);
   const allRated = await checkIfAllEmployersRated(jobId);
   if (allRated) {
     await jobDB.updateJobStatus(jobId, 'completed');
@@ -248,19 +248,22 @@ const autoRateUnratedEmployees = async (jobId) => {
     const jp = jobProgresses.find(jp => jp.workerId.toString() === workerId.toString());
     const punctuality = 0;
     const completion = jp?.status === 'completed' || jp?.status === 'verified' ? 5 : 0;
-    const totalScore = +(completion / 4).toFixed(1); // зөвхөн 1 metric ашиглаж байгаа тул 5-аас буулгана
+    const totalScore = +(completion / 4).toFixed(1);
+
+    const criteria = {
+      punctuality,
+      job_completion: completion,
+    };
 
     const ratingData = {
       fromUserId: job.employerId,
       toUserId: workerId,
       jobId,
       branchType: job.branch || '',
-      manualRating: { score: 0, comment: '' },
-      systemRating: [
-        { metric: 'punctuality', score: punctuality },
-        { metric: 'completion', score: completion }
-      ],
-      totalScore
+      criteria,                          // ✅ unified field
+      comment: '',                       // ✅ required by schema
+      targetRole: 'employee',            // ✅ consistent with other ratings
+      totalScore,
     };
 
     await ratingDB.createRating(ratingData);
@@ -268,6 +271,14 @@ const autoRateUnratedEmployees = async (jobId) => {
   }
 };
 
+const checkIfEmployerRated = async (userId, jobId) => {
+  return await Rating.findOne({
+      fromUserId: userId,
+      jobId,
+      targetRole: 'employer'
+    });
+   
+};
 
 module.exports = { 
   createRating, 
@@ -275,5 +286,6 @@ module.exports = {
   getJobRatingsEmployees,
   getJobRatingByEmployer,
   rateEmployee,
-  rateEmployer
+  rateEmployer,
+  checkIfEmployerRated
 };

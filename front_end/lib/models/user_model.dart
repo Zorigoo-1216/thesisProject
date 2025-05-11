@@ -176,27 +176,21 @@ class AverageRatingForEmployer {
 }
 
 class Review {
-  final String reviewerId;
-  final String reviewerRole;
-  final String comment;
-  final String createdAt;
+  final String branchType;
   final Map<String, num> criteria;
+  final int count;
 
   Review({
-    required this.reviewerId,
-    required this.reviewerRole,
-    required this.comment,
-    required this.createdAt,
+    required this.branchType,
     required this.criteria,
+    required this.count,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
     return Review(
-      reviewerId: json['reviewerId'] ?? '',
-      reviewerRole: json['reviewerRole'] ?? '',
-      comment: json['comment'] ?? '',
-      createdAt: json['createdAt'] ?? '',
+      branchType: json['branchType'] ?? '',
       criteria: Map<String, num>.from(json['criteria'] ?? {}),
+      count: json['count'] ?? 0,
     );
   }
 }

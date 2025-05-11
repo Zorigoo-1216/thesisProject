@@ -128,8 +128,8 @@ const getJobList = async (userId) => {
 
 const getEmployerByJobId = async (jobId) =>{
   try {
+    //console.log("job in jobservice",job);
     const job = await jobDB.getJobById(jobId);
-    console.log("job in jobservice",job);
     const emp = await userDB.getUserById(job.employerId);
     const employer = new viewUserDTO(emp);
     return { success: true, data: employer };
@@ -296,7 +296,10 @@ const getJobById = async (jobId) => {
     if (!job) {
       return { success: false, message: "Job not found" };
     }
-    return { success: true, data: job };
+    const viewJob = new viewJobDTO(
+      job,
+    )
+    return { success: true, data: viewJob };
   } catch (error) {
     console.error("Error getting job by ID:", error.message);
     return { success: false, message: error.message };

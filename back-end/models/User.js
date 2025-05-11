@@ -64,8 +64,7 @@ const userSchema = new mongoose.Schema({
   reviews: {
     type: [
       {
-        reviewerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-        reviewerRole: { type: String, enum: ['individual', 'company'] },
+        branchType: { type: String, required: true },
         criteria: {
           speed: { type: Number, default: 0 },
           performance: { type: Number, default: 0 },
@@ -80,8 +79,7 @@ const userSchema = new mongoose.Schema({
           no_show: { type: Number, default: 0 },
           absenteeism: { type: Number, default: 0 }
         },
-        comment: { type: String, default: '' },
-        createdAt: { type: Date, default: Date.now }
+        count: { type: Number, default: 0 }
       }
     ],
     default: []

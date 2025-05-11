@@ -1,3 +1,4 @@
+// 📁 employer_rate_screen.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -5,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../constant/api.dart';
 import '../../constant/styles.dart';
 import '../../widgets/custom_sliver_app_bar.dart';
+import '../../models/user_model.dart';
 
 class EmployerRateScreen extends StatefulWidget {
   final String jobId;
@@ -15,16 +17,53 @@ class EmployerRateScreen extends StatefulWidget {
 }
 
 class _EmployerRateScreenState extends State<EmployerRateScreen> {
-  int selectedRating = 0;
-  final TextEditingController commentController = TextEditingController();
   bool loading = true;
   bool isRated = false;
-  Map<String, dynamic>? employer;
+  UserModel? employer;
+  final Map<String, int> ratings = {};
+  final TextEditingController commentController = TextEditingController();
+
+  final criteriaLabels = {
+    'employee_relationship': 'Ажилтантай харилцах байдал',
+    'salary_fairness': 'Цалингийн шударга байдал',
+    'work_environment': 'Ажлын орчин',
+    'growth_opportunities': 'Хувь хүний өсөлт',
+    'workload_management': 'Ажлын ачааллын зохион байгуулалт',
+    'leadership_style': 'Удирдлагын хэв маяг',
+    'decision_making': 'Шийдвэр гаргах байдал',
+    'legal_compliance': 'Хууль зөрчөөгүй эсэх',
+  };
 
   @override
   void initState() {
     super.initState();
-    fetchEmployer();
+    fetchEmployer().then((_) async {
+      if (employer != null) {
+        await checkIfRated(); // ⬅️ wait хийж дуусгах
+      }
+      setState(() => loading = false); // ⬅️ loading-г энд false болго
+    });
+  }
+
+  Future<void> checkIfRated() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token') ?? '';
+
+    try {
+      final res = await http.get(
+        Uri.parse('${baseUrl}ratings/job/${widget.jobId}/check-employer-rated'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200 && data['success'] == true) {
+        setState(() {
+          isRated = data['isRated'] == true;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Failed to check if rated: $e');
+    }
   }
 
   Future<void> fetchEmployer() async {
@@ -33,15 +72,16 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
 
     try {
       final res = await http.get(
-        Uri.parse('${baseUrl}ratings/job/${widget.jobId}/employer'),
+        Uri.parse('${baseUrl}jobs/${widget.jobId}/employer'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       final data = jsonDecode(res.body);
-      if (res.statusCode == 200 && data['success'] == true) {
+      if (res.statusCode == 200 &&
+          data['success'] == true &&
+          data['employer'] != null) {
         setState(() {
-          employer = data['data'];
-          loading = false;
+          employer = UserModel.fromJson(data['employer']);
         });
       } else {
         debugPrint("⚠️ Employer fetch failed: ${data['message']}");
@@ -59,8 +99,8 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
     final comment = commentController.text.trim();
 
     final body = jsonEncode({
-      'employerId': employer!['id'],
-      'criteria': {'employee_relationship': selectedRating},
+      'employerId': employer!.id,
+      'criteria': ratings,
       'comment': comment,
     });
 
@@ -79,9 +119,7 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text("Үнэлгээ илгээгдлээ")));
-        setState(() {
-          isRated = true;
-        });
+        setState(() => isRated = true);
       } else {
         ScaffoldMessenger.of(
           context,
@@ -91,8 +129,54 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
       debugPrint('❌ Submit rating error: $e');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Алдаа гарлаа.")));
+      ).showSnackBar(const SnackBar(content: Text("Сүлжээний алдаа гарлаа")));
     }
+  }
+
+  Widget buildStarRow(String key, String label) {
+    final currentRating = ratings[key] ?? 0;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.text,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 5,
+            child: Row(
+              children: List.generate(5, (index) {
+                return IconButton(
+                  padding: EdgeInsets.zero,
+                  iconSize: 28,
+                  icon: Icon(
+                    index < currentRating ? Icons.star : Icons.star_border,
+                    color: AppColors.primary,
+                  ),
+                  onPressed:
+                      isRated
+                          ? null
+                          : () => setState(() => ratings[key] = index + 1),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -131,67 +215,39 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
                             ),
                           ),
                           const SizedBox(height: AppSpacing.sm),
+                          Text(employer!.name, style: AppTextStyles.heading),
+                          Text(employer!.role, style: AppTextStyles.subtitle),
+                          const SizedBox(height: 4),
                           Text(
-                            employer!['name'] ?? '',
-                            style: AppTextStyles.heading,
+                            employer!.phone ?? '',
+                            style: const TextStyle(color: AppColors.subtitle),
                           ),
+                          const SizedBox(height: 6),
                           Text(
-                            employer!['role'] ?? '',
-                            style: AppTextStyles.subtitle,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _statBox(
-                                employer!['averageRating']?.toStringAsFixed(
-                                      1,
-                                    ) ??
-                                    '0.0',
-                                "ҮНЭЛГЭЭ",
-                                Icons.star,
-                                Colors.amber,
-                              ),
-                            ],
+                            "Дундаж үнэлгээ: ${employer!.averageRatingForEmployer.overall.toStringAsFixed(1)}",
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.lg),
-
                           isRated
                               ? const Text(
                                 "Та энэ ажил олгогчийг үнэлсэн байна",
                                 style: TextStyle(color: AppColors.subtitle),
                               )
                               : Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: List.generate(5, (index) {
-                                      return IconButton(
-                                        icon: Icon(
-                                          index < selectedRating
-                                              ? Icons.star
-                                              : Icons.star_border,
-                                          color: AppColors.primary,
-                                          size: 32,
-                                        ),
-                                        onPressed: () {
-                                          setState(
-                                            () => selectedRating = index + 1,
-                                          );
-                                        },
-                                      );
-                                    }),
+                                  ...criteriaLabels.entries.map(
+                                    (e) => buildStarRow(e.key, e.value),
                                   ),
-                                  const SizedBox(height: AppSpacing.sm),
+                                  const SizedBox(height: 12),
                                   TextField(
                                     controller: commentController,
-                                    enabled: !isRated,
                                     maxLines: 3,
                                     decoration: InputDecoration(
                                       hintText: "Тайлбар бичих...",
-                                      prefixIcon: const Icon(
-                                        Icons.comment_outlined,
-                                      ),
                                       filled: true,
                                       fillColor: Colors.grey.shade100,
                                       border: OutlineInputBorder(
@@ -205,7 +261,7 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
                                     width: double.infinity,
                                     child: ElevatedButton(
                                       onPressed:
-                                          selectedRating > 0
+                                          ratings.isNotEmpty
                                               ? submitRating
                                               : null,
                                       style: ElevatedButton.styleFrom(
@@ -228,29 +284,6 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
                         ],
                       ),
                     ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statBox(String value, String label, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 6),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(label, style: const TextStyle(fontSize: 12)),
-            ],
           ),
         ],
       ),

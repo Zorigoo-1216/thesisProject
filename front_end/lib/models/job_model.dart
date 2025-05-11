@@ -20,6 +20,7 @@ class Job {
   final String postedAgo;
   final bool isApplied;
   final String applicationStatus;
+  final String category;
   Job({
     required this.jobId,
     required this.title,
@@ -40,6 +41,7 @@ class Job {
     required this.employerName,
     required this.postedAgo,
     required this.employerId,
+    required this.category,
     this.isApplied = false,
     this.applicationStatus = 'none',
   });
@@ -74,6 +76,7 @@ class Job {
       postedAgo: json['postedAgo'] ?? '',
       isApplied: json['isApplied'] ?? false,
       applicationStatus: json['applicationStatus'] ?? 'none',
+      category: json['category'] ?? '',
     );
   }
 }

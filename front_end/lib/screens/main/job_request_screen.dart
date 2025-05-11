@@ -7,6 +7,7 @@ import '../../constant/styles.dart';
 import '../../widgets/job_request_card.dart';
 import '../../constant/api.dart';
 import '../../models/rated_user_model.dart';
+import '../../models/job_model.dart';
 
 class JobRequestScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -29,7 +30,7 @@ class _JobRequestScreenState extends State<JobRequestScreen>
   late TabController _tabController;
   bool isSelecting = false;
   bool isLoading = false;
-
+  Job? job;
   final Set<String> selectedUsers = {};
   late List<String> tabTitles;
   Map<String, List<UserModel>> tabData = {};
@@ -52,6 +53,41 @@ class _JobRequestScreenState extends State<JobRequestScreen>
 
     debugPrint("📥 JobRequestScreen opened with jobId: ${widget.jobId}");
     fetchAllTabData();
+    fetchJobById();
+  }
+
+  Future<void> fetchJobById() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      debugPrint("⛔️ No auth token");
+      return;
+    }
+
+    final url = Uri.parse('${baseUrl}jobs/${widget.jobId}');
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        final jobData = json['job'] ?? json; // depending on your API structure
+        setState(() {
+          job = Job.fromJson(jobData);
+        });
+        fetchAllTabData(); // 🆕 ажлын мэдээлэл авсны дараа хүсэлтүүдээ авна
+      } else {
+        debugPrint("❌ Failed to load job: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint("❌ Exception in fetchJobById: $e");
+    }
   }
 
   Future<void> fetchAllTabData() async {
@@ -220,6 +256,7 @@ class _JobRequestScreenState extends State<JobRequestScreen>
   Widget buildUserCard(UserModel user) {
     print("👀 JobRequestCard rendering user: ${user.id}, ${user.name}");
     return JobRequestCard(
+      job: job!,
       user: user,
       showCheckbox: isSelecting,
       checked: selectedUsers.contains(user.id),

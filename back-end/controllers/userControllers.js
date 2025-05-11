@@ -56,7 +56,8 @@ const getProfile = async (req, res) => {
 };
 const updateProfile = async (req, res) => {
   try {
-    const userId = req.user.id;
+  console.log('📥 /updateProfile PUT :', req.body);
+    const userId = req.user.id || req.params.userId || req.user._id;
     const updates = req.body;
     const result = await userService.updateProfile(userId, updates);
 

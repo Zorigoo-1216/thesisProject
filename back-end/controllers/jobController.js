@@ -83,9 +83,9 @@ const getEmployerByJobId = async (req, res) => {
   try {
     console.log ("📥 /get-employer-by-job-id GET :");
     const jobId = req.params.jobId || req.body.jobId ;
-    console.log(jobId);
+    //console.log(jobId);
     const employer = await jobService.getEmployerByJobId(jobId);
-    console.log(employer.data);
+    console.log(" employer: ", employer.data);
     return res.status(200).json({ success: true, message: 'Employer fetched successfully', employer : employer.data });
   } catch (error) {
     console.error('❌ Error fetching employer:', error.message);
@@ -170,7 +170,7 @@ const getJobById = async (req, res) => {
     if (!job) {
       return res.status(404).json({ success: false, message: 'Job not found' });
     }
-    return res.status(200).json({ success: true, message: 'Job fetched successfully', job });
+    return res.status(200).json({ success: true, message: 'Job fetched successfully',  job: job.data });
   } catch (error) {
     console.error('❌ Error fetching job by ID:', error.message);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });

@@ -80,8 +80,7 @@ class ViewUserDTO {
 
     this.reviews = Array.isArray(user.reviews)
       ? user.reviews.map(review => ({
-          reviewerId: review.reviewerId?.toString() || '',
-          reviewerRole: review.reviewerRole || '',
+          branchType: review.branchType || '',
           criteria: {
             speed: review.criteria?.speed || 0,
             performance: review.criteria?.performance || 0,
@@ -96,8 +95,7 @@ class ViewUserDTO {
             no_show: review.criteria?.no_show || 0,
             absenteeism: review.criteria?.absenteeism || 0
           },
-          comment: review.comment || '',
-          createdAt: review.createdAt || null
+          count: review.count || 0
         }))
       : [];
 

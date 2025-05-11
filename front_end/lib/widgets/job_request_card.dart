@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import '../constant/styles.dart';
 import 'package:front_end/models/user_model.dart';
+import 'package:front_end/models/job_model.dart';
 
 class JobRequestCard extends StatefulWidget {
   final UserModel? user;
+  final Job job;
   final bool showCheckbox;
   final bool checked;
   final ValueChanged<bool> onChanged;
@@ -11,6 +13,7 @@ class JobRequestCard extends StatefulWidget {
   const JobRequestCard({
     super.key,
     required this.user,
+    required this.job,
     required this.showCheckbox,
     required this.checked,
     required this.onChanged,
@@ -26,12 +29,12 @@ class _JobRequestCardState extends State<JobRequestCard> {
   @override
   Widget build(BuildContext context) {
     final user = widget.user;
-    if (user == null) return SizedBox();
+    if (user == null) return const SizedBox();
 
-    final review = user.reviews.isNotEmpty ? user.reviews.first : null;
+    final branchType = widget.job.category;
 
-    // Default 0 үнэлгээ
-    final criteria = {
+    // Default criteria
+    final Map<String, int> criteria = {
       'speed': 0,
       'performance': 0,
       'quality': 0,
@@ -46,9 +49,18 @@ class _JobRequestCardState extends State<JobRequestCard> {
       'absenteeism': 0,
     };
 
-    if (review != null) {
-      for (var key in review.criteria.keys) {
-        criteria[key] = review.criteria[key]!.clamp(0, 5).toInt();
+    // 🆕: Use branch-matching review
+    final Review? review = user.reviews.firstWhere(
+      (r) => r.branchType == branchType,
+      orElse: () => Review(branchType: '', criteria: {}, count: 0),
+    );
+
+    if (review?.branchType != '') {
+      for (var key in review!.criteria.keys) {
+        final value = review?.criteria[key];
+        if (value != null) {
+          criteria[key] = value.round().clamp(0, 5);
+        }
       }
     }
 
@@ -133,7 +145,7 @@ class _JobRequestCardState extends State<JobRequestCard> {
                                     color:
                                         i < entry.value
                                             ? Colors.orange
-                                            : Colors.grey[300], // саарал өнгө
+                                            : Colors.grey.shade300,
                                   );
                                 }),
                               ),

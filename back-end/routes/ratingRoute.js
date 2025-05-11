@@ -14,4 +14,7 @@ router.get('/job/:jobId', authenticate, ratingController.getJobRatingsEmployees)
 router.get('/job/:jobId/employer', authenticate, ratingController.getJobRatingByEmployer);
 router.post('/job/:jobId/employer', authenticate, ratingController.rateEmployer);
 router.post('/job/:jobId/employee', authenticate, ratingController.rateEmployee);
+// routes/rating.route.js
+router.get('/job/:jobId/check-employer-rated', authenticate, ratingController.checkIfEmployerRated);
+
 module.exports = router;

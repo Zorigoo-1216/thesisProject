@@ -43,7 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final token = prefs.getString('token');
 
     if (token == null) {
-      print("Token not found");
+      // print("Token not found");
       return;
     }
 
@@ -55,24 +55,23 @@ class _ProfileScreenState extends State<ProfileScreen>
       },
     );
 
-    print("Status code: ${response.statusCode}");
-    print("Raw body: ${response.body}");
+    // print("Status code: ${response.statusCode}");
+    print("User profile: ${response.body}");
 
     try {
-      final data = jsonDecode(response.body); // This must be a Map
-      print("Decoded type: ${data.runtimeType}"); // <-- must be Map
-
-      setState(() {
-        user = UserModel.fromJson(
-          data,
-        ); // <- only works if data is Map<String, dynamic>
-        isLoading = false;
-      });
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200 && data['success'] == true) {
+        setState(() {
+          user = UserModel.fromJson(data['data']['data']);
+          isLoading = false;
+        });
+      } else {
+        print("❌ Failed to load profile: ${data['message']}");
+        setState(() => isLoading = false);
+      }
     } catch (e) {
-      print("Error parsing response: $e");
-      setState(() {
-        isLoading = false;
-      });
+      print("❌ Error parsing response: $e");
+      setState(() => isLoading = false);
     }
   }
 
@@ -137,15 +136,43 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _ratingTab() {
-    return Center(
-      child:
-          user == null
-              ? const Text(
-                "\u04ae\u043d\u044d\u043b\u0433\u044d\u044d \u043e\u043b\u0434\u0441\u043e\u043d\u0433\u04af\u0439",
-              )
-              : Text(
-                "\u2b50 \u04ae\u043d\u044d\u043b\u0433\u044d\u044d: ${user!.averageRating.overall}",
-              ),
+    if (user == null) {
+      return const Center(child: Text("Үнэлгээ олдсонгүй"));
+    }
+
+    final employeeRating = user!.averageRating.overall.toStringAsFixed(1);
+    final employerRating = user!.averageRatingForEmployer.overall
+        .toStringAsFixed(1);
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("⭐ Ажилтны дундаж үнэлгээ", style: AppTextStyles.subtitle),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text("$employeeRating / 5", style: AppTextStyles.heading),
+              const SizedBox(width: 8),
+              const Icon(Icons.star, color: Colors.amber),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "🏢 Ажил олгогчийн дундаж үнэлгээ",
+            style: AppTextStyles.subtitle,
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Text("$employerRating / 5", style: AppTextStyles.heading),
+              const SizedBox(width: 8),
+              const Icon(Icons.star, color: Colors.amber),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -174,11 +201,22 @@ class ProfileInfo extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _infoCard("RATING", "${user.averageRating.overall}", Icons.star),
+              _infoCard("Ажилтан", "${user.averageRating.overall}", Icons.star),
               const SizedBox(width: 12),
-              _infoCard("ROLE", user.role, Icons.person),
+              _infoCard(
+                "Ажил олгогч",
+                "${user.averageRatingForEmployer.overall}",
+                Icons.star,
+              ),
+              const SizedBox(width: 12),
+              _infoCard(
+                "Төрөл",
+                user.role == "individual" ? "Хувь хүн" : "Компани",
+                user.role == "individual" ? Icons.person : Icons.business,
+              ),
             ],
           ),
+
           const SizedBox(height: 12),
           const Text("Email", style: AppTextStyles.subtitle),
           Text(user.email ?? "-"),
