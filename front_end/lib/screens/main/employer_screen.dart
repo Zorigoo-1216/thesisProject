@@ -30,6 +30,15 @@ class _EmployerScreenState extends State<EmployerScreen>
         fetchMyPostedJobs(); // Fetch the jobs when the screen is initialized
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Хуудас руу орох бүрт шинэчлэх
+    setState(() {
+      _jobs = fetchMyPostedJobs();
+    });
+  }
+
   // Fetch jobs asynchronously from API
   Future<List<Job>> fetchMyPostedJobs() async {
     final prefs = await SharedPreferences.getInstance();
@@ -68,10 +77,11 @@ class _EmployerScreenState extends State<EmployerScreen>
 
   @override
   Widget build(BuildContext context) {
+    //final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: false, tabs: []),
+          CustomSliverAppBar(showTabs: false, showBack: false, tabs: []),
           SliverPersistentHeader(
             pinned: true,
             delegate: _TabBarDelegate(_tabController),

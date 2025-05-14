@@ -110,6 +110,8 @@ class _ApplicationScreenState extends State<ApplicationScreen>
 
   @override
   Widget build(BuildContext context) {
+    //final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
+
     return Scaffold(
       body: DefaultTabController(
         length: 3,
@@ -117,7 +119,7 @@ class _ApplicationScreenState extends State<ApplicationScreen>
           slivers: [
             CustomSliverAppBar(
               showTabs: true,
-              showBack: true,
+              showBack: false, // ✅ back arrow зөвхөн stack navigation-д
               tabController: _tabController,
               tabs: const [
                 Tab(text: "Хүлээгдэж буй"),

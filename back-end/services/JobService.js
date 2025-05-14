@@ -34,32 +34,61 @@ const createJob = async (jobData, employerId) => {
 
 
 
-// ajild tohiroh ajilchdiig oloh
 const findEligibleUsers = async (job) => {
   const combinedText = [job.title, ...(job.description || [])].join(" ").toLowerCase();
-  const keywords = combinedText.split(/\s+/).filter(w => w.length > 2); // богино үгс хасна
-
+  const keywords = combinedText.split(/\s+/).filter(w => w.length > 2);
   const regexes = keywords.map(word => new RegExp(word, 'i'));
 
-  const query = {
+  const baseQuery = {
     state: 'Active',
     isVerified: true,
-    'profile.waitingSalaryPerHour': { $lte: job.salary.amount },
-    ...(job.possibleForDisabled === false && { 'profile.isDisabledPerson': false }),
-    ...(job.branch && { 'profile.mainBranch': job.branch }),
-    $or: [
-      { 'profile.skills': { $in: job.requirements || [] } },
-      {
-        'profile.skills': {
-          $elemMatch: { $in: regexes }
-        }
-      }
-    ]
+    _id: { $ne: job.employerId },
+    ...(job.possibleForDisabled === false && { 'profile.isDisabledPerson': false })
   };
 
-  const result = await userDB.findUsersByQuery(query);
-  return Array.isArray(result) ? result : [];
+  // Get all users meeting the base query first
+  const candidates = await userDB.findUsersByQuery(baseQuery);
+
+  const start = new Date(job.startDate);
+  const end = new Date(job.endDate);
+
+  const isScheduleConflict = (schedule) => {
+    return schedule.some(s => {
+      const sStart = new Date(s.startDate);
+      const sEnd = new Date(s.endDate);
+      return (start <= sEnd && end >= sStart);
+    });
+  };
+
+  // Filter based on partial matches: at least one match
+  const filtered = candidates.filter(user => {
+    const profile = user.profile || {};
+
+    const hasMainBranchMatch = profile.mainBranch && job.branch && profile.mainBranch === job.branch;
+
+    const hasSkillMatch = (job.requirements || []).some(req =>
+      (profile.skills || []).includes(req)
+    );
+
+    const hasKeywordMatch = (profile.skills || []).some(skill =>
+      regexes.some(rx => rx.test(skill))
+    );
+
+    const hasRatingMatch = (user.reviews || []).some(r =>
+      r.branchType === job.branch && r.criteria && r.criteria.performance > 0
+    );
+
+    const hasNoScheduleConflict = !isScheduleConflict(user.schedule || []);
+
+    // Match if ANY of the optional conditions are met
+    return hasNoScheduleConflict || (
+      hasMainBranchMatch || hasSkillMatch || hasKeywordMatch || hasRatingMatch
+    );
+  });
+
+  return filtered;
 };
+
 
 // tohirson ajilchdad medegdel ilgeeh
 
@@ -125,6 +154,26 @@ const getJobList = async (userId) => {
     return { success: false, message: error.message };
   }
 };
+
+const getTopJobs = async () => {
+  try {
+    const jobs = await jobDB.getTopJobs();
+    const users = await userDB.getUsersByIds(jobs.map(job => job.employerId));
+    const applications = await applicationDB.getApplicationFilteredByJobId(jobs.map(job => job._id));
+
+    const finalJobs = jobs.map(job => {
+      const employer = users.find(u => u._id.toString() === job.employerId.toString());
+      const jobApplications = applications.filter(app => app.jobId.toString() === job._id.toString());
+      return new viewJobDTO(job, jobApplications, employer);
+    });
+
+    return { success: true, data: finalJobs };
+  } catch (error) {
+    console.error("Error getting top jobs:", error.message);
+    return { success: false, message: error.message };
+  }
+}
+
 
 const getEmployerByJobId = async (jobId) =>{
   try {
@@ -413,31 +462,21 @@ const getSuitableWorkersByJob = async (jobId) => {
     const job = await jobDB.getJobById(jobId);
     if (!job) throw new Error('Job not found');
 
-    const employees = await findEligibleUsers(job); // Find eligible users for the job
-    console.log("✅ Eligible workers found in jobservice:", employees?.length || 0);
-
+    const employees = await findEligibleUsers(job);
     const branchType = job.branch;
-    const usersWithRating = [];
 
-    for (const user of employees) {
+    const usersWithRating = employees.map(user => {
       const viewUser = new viewUserDTO(user);
 
-      // ✅ Тухайн ажлын төрөлтэй тохирох үнэлгээг авах
-      let branchRating = 0;
-      const found = Array.isArray(viewUser.averageRating?.byBranch)
-        ? viewUser.averageRating.byBranch.find(
-            r => r.branchType === branchType
-          )
-        : null;
-      branchRating = found?.score || 0;
+      const branchRating =
+        viewUser.averageRating?.byBranch?.find(r => r.branchType === branchType)?.score || 0;
 
-      usersWithRating.push({
-        user: new viewUserDTO(user),
+      return {
+        viewUserDTO: viewUser, // ✅ root түвшинд name хадгалах
         rating: branchRating,
-      });
-    }
+      };
+    });
 
-    // ✅ Рейтингээр бууруулж эрэмбэлэх
     usersWithRating.sort((a, b) => b.rating - a.rating);
 
     return usersWithRating;
@@ -460,5 +499,6 @@ module.exports = {
   deleteJob,
   getMyPostedJobs,
   getSuitableWorkersByJob,
-  getEmployerByJobId
+  getEmployerByJobId,
+  getTopJobs
 };

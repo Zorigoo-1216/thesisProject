@@ -143,7 +143,13 @@ const getJobLisForUser = async (user, filters) => {
     return await Job.findByIdAndUpdate(jobId, { status: newStatus });
   };
   
-
+  /**
+   * Gets the top 5 jobs by views, sorted in descending order.
+   * @returns {Object[]} An array of the top 5 jobs.
+   */
+  const getTopJobs = async () => {
+    return await Job.find().sort({ views: -1 }).limit(5);
+  }
 
 
 module.exports = {
@@ -161,5 +167,6 @@ module.exports = {
     cancelApplication,
     findUsersByQuery,
     addEmployeeToJob,
-    updateJobStatus
+    updateJobStatus,
+    getTopJobs
 };

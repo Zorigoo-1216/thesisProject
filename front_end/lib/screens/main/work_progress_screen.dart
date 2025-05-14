@@ -30,6 +30,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
   bool selecting = false;
   List<Worker> allWorkers = [];
   List<Payment> allPayments = [];
+  bool hasShownFeedbackDialog = false;
 
   @override
   void initState() {
@@ -50,6 +51,18 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
 
     checkContractExists();
     fetchStartRequests();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Хуудас руу орох бүрт өгөгдлийг шинэчлэх
+    setState(() {
+      selecting = false;
+    });
+    fetchStartRequests();
+    fetchPayments();
+    checkContractExists();
   }
 
   Future<void> fetchStartRequests() async {
@@ -91,20 +104,28 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
           allPayments = payments;
         });
 
-        // ✅ Бүх төлбөрийн статус 'paid' эсэхийг шалгана
+        // ✅ Бүх төлбөр 'paid' болсон эсэхийг шалгана
         final allPaid =
             payments.isNotEmpty && payments.every((p) => p.status == 'paid');
-        if (allPaid) {
-          Future.delayed(Duration.zero, () {
+
+        if (allPaid && !hasShownFeedbackDialog && mounted) {
+          hasShownFeedbackDialog = true;
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+
             showDialog(
               context: context,
+              barrierDismissible: false, // Хаахгүй бол хүчээр хаана
               builder:
-                  (_) => AlertDialog(
+                  (context) => AlertDialog(
                     title: const Text("Санал хүсэлт"),
                     content: const Text("Та ажилчдад үнэлгээ өгнө үү."),
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () {
+                          Navigator.pop(context); // popup-ыг хаана
+                        },
                         child: const Text("Дараа"),
                       ),
                       ElevatedButton(
@@ -112,15 +133,11 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                           backgroundColor: AppColors.primary,
                         ),
                         onPressed: () {
-                          Navigator.of(context).pop();
+                          Navigator.pop(context); // popup-ыг хаана
                           Navigator.pushNamed(
                             context,
                             '/rate-employee',
-                            arguments: {
-                              'jobId':
-                                  widget
-                                      .jobId, // 🔄 String утгыг map дотор оруулж байна
-                            },
+                            arguments: {'jobId': widget.jobId},
                           );
                         },
                         child: const Text(
@@ -313,6 +330,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return DefaultTabController(
       length: 3,
       initialIndex: widget.initialTabIndex,
@@ -323,7 +341,7 @@ class _WorkProgressScreenState extends State<WorkProgressScreen>
                 CustomSliverAppBar(
                   tabController: _tabController,
                   showBack: true,
-                  showTabs: true,
+                  showTabs: !isMainTab,
                   tabs: const [
                     Tab(text: "Хүсэлтүүд"),
                     Tab(text: "Ажлын явц"),

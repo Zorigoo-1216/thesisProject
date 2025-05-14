@@ -5,7 +5,9 @@ const applicationController = require('../controllers/applicationController');
 const authMiddleware = require('../middleware/authMiddleware');
 const userController = require('../controllers/userControllers');
 // -------------------------------ajil haih -----------------------
+
 router.get('/', authMiddleware, jobController.getJobList);  
+router.get('/topjobs', jobController.getTopJobs); 
 router.get("/search", authMiddleware, jobController.searchJobs);  
 router.get('/searchByTitle', jobController.searchJobs); 
 router.get('/suitable', authMiddleware, jobController.getSuitableJobsForUser);
@@ -29,6 +31,6 @@ router.get('/:id/candidates', authMiddleware, applicationController.getCandidate
 router.get('/:id/employers', authMiddleware, applicationController.getEmployeesByJob);
 
 
-
+// use case 2.2
 
 module.exports = router

@@ -7,6 +7,7 @@ import '../../constant/styles.dart';
 import '../../constant/api.dart';
 import '../../models/job_model.dart';
 import '../../models/user_model.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class JobDetailScreen extends StatefulWidget {
   final Job job;
@@ -111,119 +112,120 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    //final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     final job = widget.job;
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: AppColors.white,
-          elevation: 0,
-          toolbarHeight: 80,
-          leading: const BackButton(color: AppColors.text),
-          title: const Text(
-            "Ажлын дэлгэрэнгүй",
-            style: TextStyle(color: AppColors.text),
-          ),
-        ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+        body: NestedScrollView(
+          headerSliverBuilder:
+              (context, innerBoxIsScrolled) => [
+                CustomSliverAppBar(
+                  showTabs: true,
+                  showBack: true,
+                  tabs: [Tab(text: 'Ажлын мэдээлэл'), Tab(text: 'Ажил олгогч')],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      const CircleAvatar(
-                        radius: 24,
-                        backgroundImage: AssetImage('assets/images/avatar.png'),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              job.employerName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(job.title),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.location_on,
-                                  size: 14,
-                                  color: Colors.grey,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  job.location,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              job.salary.getSalaryFormatted(),
-                              style: const TextStyle(color: Colors.blue),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+              ],
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Card(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ),
-              ),
-            ),
-            const TabBar(
-              labelColor: AppColors.primary,
-              unselectedLabelColor: Colors.black,
-              indicatorColor: AppColors.primary,
-              tabs: [Tab(text: 'Ажлын мэдээлэл'), Tab(text: 'Ажил олгогч')],
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _jobInfoTab(job),
-                  isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _employerInfoTabFromUserModel(employerUser),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: applying ? null : _toggleApplication,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        applied ? Colors.grey.shade300 : AppColors.primary,
-                    foregroundColor: applied ? AppColors.text : Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 24,
+                          backgroundImage: AssetImage(
+                            'assets/images/avatar.png',
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                job.employerName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(job.title),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: Colors.grey,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    job.location,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                job.salary.getSalaryFormatted(),
+                                style: const TextStyle(color: Colors.blue),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child:
-                      applying
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : Text(applied ? 'Илгээсэн' : 'Илгээх'),
                 ),
               ),
-            ),
-          ],
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _jobInfoTab(job),
+                    isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _employerInfoTabFromUserModel(employerUser),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: applying ? null : _toggleApplication,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          applied ? Colors.grey.shade300 : AppColors.primary,
+                      foregroundColor: applied ? AppColors.text : Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child:
+                        applying
+                            ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : Text(applied ? 'Илгээсэн' : 'Илгээх'),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

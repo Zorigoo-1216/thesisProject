@@ -9,8 +9,10 @@ function initSocket(server) {
   });
 
   io.on('connection', (socket) => {
+     console.log("🛜 A user connected:", socket.id);
     socket.on('register', (userId) => {
-      onlineUsers.set(userId, socket.id);
+      console.log('✅ Registered user on socket:', userId);
+      onlineUsers.set(userId.toString(), socket.id);
     });
 
     socket.on('disconnect', () => {

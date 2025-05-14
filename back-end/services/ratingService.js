@@ -6,6 +6,7 @@ const Payment = require('../models/Payment');
 const Rating = require('../models/Rating');
 const Job = require('../models/Job');
 const JobProgress = require('../models/jobProgress');
+const notificationService = require('./notificationService');
 const createRating = async (data) => {
   const { fromUserId, toUserId, jobId } = data;
 
@@ -66,12 +67,14 @@ const getJobRatingsEmployees = async (userId, jobId) => {
   }
 
   const workers = await userDB.getUsersByIds(workerIds);
-
+  const ratings = await Rating.find({jobId, fromUserId: job.employerId});
+  const ratedUserIds = ratings.map(r => r.toUserId.toString());
   const workerWithName = workers.map(w => ({
     id: w._id,
     name: `${w.lastName ?? ''} ${w.firstName ?? ''}`.trim(),
     phone: w.phone ?? '',
-    role: w.role ?? ''
+    role: w.role ?? '',
+    alreadyRated: ratedUserIds.includes(w._id.toString()),
   }));
 
   return { success: true, data: workerWithName };
@@ -160,7 +163,16 @@ const rateEmployee = async (userId, employeeId, criteria, comment, jobId) => {
   if (allRated) {
     await jobDB.updateJobStatus(jobId, 'completed');
   }
-
+  const notification  = await notificationService.sendNotification(employeeId, {
+    title: 'Rating Received',
+    message: 'You have received a rating',
+    type: 'rating',
+  })
+  if (!notification) {
+    console.log('Failed to send notification');
+  } else {
+    console.log('Notification sent successfully');
+  }
   return { success: true, message: 'Employee rated', data: ratingData };
 };
 
@@ -191,7 +203,16 @@ const rateEmployer = async (userId, employerId, criteria, comment, jobId) => {
     await jobDB.updateJobStatus(jobId, 'completed');
     await autoRateUnratedEmployees(jobId);
   }
-
+  const notification  = await notificationService.sendNotification(employerId, {
+    title: 'Rating Received',
+    message: 'You have received a rating',
+    type: 'rating',
+  })
+  if (!notification) {
+    console.log('Failed to send notification');
+  } else {
+    console.log('Notification sent successfully');
+  }
   return { success: true, message: 'Employer rated', data: ratingData };
 };
 

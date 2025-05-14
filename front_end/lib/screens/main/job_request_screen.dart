@@ -4,6 +4,7 @@ import 'package:front_end/models/user_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 import '../../widgets/job_request_card.dart';
 import '../../constant/api.dart';
 import '../../models/rated_user_model.dart';
@@ -38,6 +39,7 @@ class _JobRequestScreenState extends State<JobRequestScreen>
   @override
   void initState() {
     super.initState();
+
     tabTitles = [
       "Боломжит ажилтан",
       "Хүсэлтүүд",
@@ -51,7 +53,33 @@ class _JobRequestScreenState extends State<JobRequestScreen>
       initialIndex: widget.initialTabIndex,
     );
 
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {
+          isSelecting = false;
+          selectedUsers.clear();
+        });
+      }
+    });
+
     debugPrint("📥 JobRequestScreen opened with jobId: ${widget.jobId}");
+    fetchAllTabData();
+    fetchJobById();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Хуудас руу орох бүрт мэдээллийг шинэчлэх
+    setState(() {
+      isLoading = true;
+    });
     fetchAllTabData();
     fetchJobById();
   }
@@ -104,12 +132,12 @@ class _JobRequestScreenState extends State<JobRequestScreen>
       final candidates = await fetchTabData('candidates');
 
       setState(() {
-        tabData["Боломжит ажилтан"] = suitable ?? [];
-        tabData["Хүсэлтүүд"] = applications ?? [];
+        tabData["Боломжит ажилтан"] = suitable;
+        tabData["Хүсэлтүүд"] = applications;
         if (widget.hasInterview) {
           tabData["Ярилцлага"] = interviews;
         }
-        tabData["Хүлээж буй"] = candidates ?? [];
+        tabData["Хүлээж буй"] = candidates;
       });
     } catch (e) {
       debugPrint("❌ Error fetching tab data: $e");
@@ -154,14 +182,10 @@ class _JobRequestScreenState extends State<JobRequestScreen>
           .whereType<Map<String, dynamic>>()
           .map((item) {
             try {
-              if ((endpoint == 'applications' ||
-                      endpoint == 'candidates' ||
-                      endpoint == 'interviews') &&
-                  item.containsKey('user')) {
-                final rated = RatedUserModel.fromJson(item);
-                print("🔥 RatedUserModel parsed user.id: ${rated.user.id}");
-
-                return rated.user;
+              if (item.containsKey('user')) {
+                return RatedUserModel.fromJson(item).user;
+              } else if (item.containsKey('viewUserDTO')) {
+                return UserModel.fromJson(item['viewUserDTO']);
               } else {
                 return UserModel.fromJson(item);
               }
@@ -359,37 +383,27 @@ class _JobRequestScreenState extends State<JobRequestScreen>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Хүсэлтүүд"),
-        leading: const BackButton(color: AppColors.text),
-        backgroundColor: AppColors.white,
-        actions: const [
-          Icon(Icons.notifications_none, color: AppColors.primary),
-          SizedBox(width: 12),
-          Icon(Icons.settings, color: AppColors.primary),
-          SizedBox(width: 12),
-        ],
-        bottom: TabBar(
+      backgroundColor: AppColors.background,
+      body: NestedScrollView(
+        headerSliverBuilder:
+            (context, innerBoxIsScrolled) => [
+              CustomSliverAppBar(
+                showBack: true,
+                showTabs: !isMainTab,
+                tabController: _tabController,
+                tabs: tabTitles.map((t) => Tab(text: t)).toList(),
+              ),
+            ],
+        body: TabBarView(
           controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: AppColors.primary,
-          tabs: tabTitles.map((t) => Tab(text: t)).toList(),
-          onTap: (_) {
-            setState(() {
-              isSelecting = false;
-              selectedUsers.clear();
-            });
-          },
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: List.generate(
-          tabTitles.length,
-          (index) => buildTabContent(index),
+          children: List.generate(
+            tabTitles.length,
+            (index) => buildTabContent(index),
+          ),
         ),
       ),
     );

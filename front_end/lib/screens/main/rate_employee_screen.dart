@@ -51,6 +51,16 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
     loadRateWorkers();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Хуудас руу орох бүрт өгөгдлийг шинэчлэх
+    setState(() {
+      loading = true;
+    });
+    loadRateWorkers();
+  }
+
   Future<void> loadRateWorkers() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -67,7 +77,7 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
         setState(() {
           workers = list.map((e) => RateWorker.fromJson(e)).toList();
           isExpanded = List.generate(workers.length, (_) => false);
-          isRated = List.generate(workers.length, (_) => false);
+          isRated = workers.map((e) => e.alreadyRated).toList();
           commentControllers = List.generate(
             workers.length,
             (_) => TextEditingController(),
@@ -181,10 +191,11 @@ class _RateEmployeeScreenState extends State<RateEmployeeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
+          CustomSliverAppBar(showTabs: false, showBack: !isMainTab, tabs: []),
           SliverToBoxAdapter(
             child:
                 loading

@@ -6,6 +6,7 @@ const jobDB = require('../dataAccess/jobDB');
 const jobProgressService = require('../services/jobProgressService')
 const jobProgressDB = require('../dataAccess/jobProgressDB');
 const Payment = require('../models/Payment');
+const notificationService = require('./notificationService');
 const { calculateSalary } = require('../utils/salaryCalculator');
 
 const getPaymentsByJob = async (jobId, employerId) => {
@@ -57,12 +58,21 @@ const transferOneSalary = async (paymentId, employerId) => {
     const payment = await Payment.findById(paymentId);
     if (!payment) return { success: false, message: "Payment not found" };
 
-    if (payment.employeeId.toString() !== employerId) return { success: false, message: "Not authorized" };
+    if (payment.employerId.toString() !== employerId) return { success: false, message: "Not authorized" };
 
     payment.status = 'paid';
     payment.paidAt = new Date();
     await payment.save();
-
+    const notification = await notificationService.sendNotification(payment.workerId, {
+      title: 'Salary paid',
+      message: 'Your salary has been paid',
+      type : 'payment',
+    })
+    if (!notification) {
+      console.log('Failed to send notification');
+    } else {
+      console.log('Notification sent successfully');
+    }
     return { success: true, data: payment };
   } catch (error) {
     console.error("Error transferring one salary:", error.message);
@@ -90,6 +100,16 @@ const transferMultipleSalaries = async (paymentIds, employerId) => {
       payment.status = 'paiding'; // ✅ Make sure this is in the enum
       payment.paidAt = new Date();
       await payment.save();
+      const notification = await notificationService.sendNotification(payment.workerId, {
+        title: 'Salary paiding',
+        message: 'Your salary has been paiding',
+        type : 'payment',
+      })
+      if (!notification) {
+        console.log('Failed to send notification');
+      } else {
+        console.log('Notification sent successfully');
+      }
       updatedPayments.push(payment);
     }
 
@@ -123,6 +143,16 @@ const markPaymentAsPaid = async (paymentId, userId) => {
     if (payment.workerId.toString() !== userId.toString()) return { success: false, message: "Not authorized" };
     const updated = await Payment.updateOne({ _id: paymentId }, { status: 'paid'});
     if (!updated) return { success: false, message: "Payment not found" };
+    const notification = await notificationService.sendNotification(payment.workerId, {
+      title: 'Salary paid',
+      message: 'Your salary has been paid',
+      type : 'payment',
+    })
+    if (!notification) {
+      console.log('Failed to send notification');
+    } else {
+      console.log('Notification sent successfully');
+    }
     return { success: true, data: updated };
   } catch (error) {
     console.error("Error marking payment as paid:", error.message);
@@ -183,6 +213,17 @@ const createPayments = async (jobprogressIds, jobId) => {
         };
 
         const created = await paymentDB.createPayment(data);
+        const notification = await notificationService.sendNotification(progress.workerId, {
+          title: 'New Payment Notification',
+          message: `You have a new payment for job ${job.title} with a total amount of
+          ${salary.total}.`,
+          type : 'payment',
+        })
+        if (!notification) {
+          console.log('Failed to send notification');
+        } else {
+          console.log('Notification sent successfully');
+        }
         payments.push(created);
       } catch (err) {
         console.error(`❌ Error processing jobProgressId ${id}:`, err.message);
@@ -214,6 +255,16 @@ const markAsPaid = async (jobId, employerId) => {
     }
 
     const updatedPayment = await paymentDB.updatePaymentStatus(jobId, 'paid');
+    const notification = await notificationService.sendNotification(payment.workerId, {
+      title: 'Payment Updated',
+      message: `Your payment for job ${job.title} has been updated to paid.`,
+      type: 'payment',
+    })
+    if (!notification) {
+      console.log('Failed to send notification');
+    } else {
+      console.log('Notification sent successfully');
+    }
     return { success: true, data: updatedPayment };
   } catch (error) {
     console.error("Error marking payment as paid:", error.message);

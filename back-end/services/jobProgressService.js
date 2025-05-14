@@ -27,7 +27,16 @@ const startJob = async (jobId, userId) => {
       contractId: contract._id,
       status: 'pendingStart',
     });
-
+    const notification = await notificationService.sendNotification(job.employerId, {
+      title: 'Нэмэлт ажиллах хүсэлт',
+      message: `Ажилчны ${job.name} ажлынхаа ажил`,
+      type : "job_alert"
+    });    
+    if(!notification) {
+      console.error('Error sending notification');
+    } else{
+      console.log('Notification sent successfully');
+    }
     return { success: true, data: progress };
   } catch (error) {
     console.error('Error starting job:', error.message);
@@ -84,7 +93,19 @@ const confirmStart = async (jobId, userId, jobprogressIds, startTime) => {
     };
 
     const updatedProgress = await jobProgressDB.updateJobProgress(jobprogressIds, updateData);
+    
+    const notification = await notificationService.sendNotification(job.employees, {
+      title: 'Ажил эхлүүлэх хүсэлтийг баталлаа',
+      message: `Job ${job.title} started by ${userId}`,
+      type : "job_alert"
+      });
+    if(!notification) {
+      console.error('Error sending notification');
+    } else{
+      console.log('Notification sent successfully');
+    }
     return { success: true, data: updatedProgress };
+  
   } catch (error) {
     console.error('Error confirming start:', error.message);
     return { success: false, message: error.message };
@@ -96,11 +117,22 @@ const confirmStart = async (jobId, userId, jobprogressIds, startTime) => {
 const requestCompletion = async (jobProgressId, userId) => {
   try {
     const progress = await jobProgressDB.getProgress(jobProgressId);
+    const job = await jobDB.getJobById(progress.jobId);
     if (!progress || progress.workerId._id.toString() !== userId.toString()) {
       throw new Error('Not authorized');
     }
 
     const updatedProgress = await jobProgressDB.updateJobProgress([jobProgressId], { status: 'verified' });
+    const notification = await notificationService.sendNotification(progress.employerId, {
+      title: 'Ажил дууссан',
+      message: `Job ${job.title} completed by ${userId}`,
+      type : "job_alert"
+    })
+    if(!notification) {
+      console.error('Error sending notification');
+    } else{
+      console.log('Notification sent successfully');
+    }
     return { success: true, data: updatedProgress };
   } catch (error) {
     console.error('Error requesting completion:', error.message);
@@ -162,7 +194,16 @@ const confirmCompletion = async (jobId, userId, jobprogressIds) => {
       endedAt: new Date(),
       isFinal: true,
     });
-
+    const notification = await notificationService.sendNotification(job.employees, {
+      title: 'Job completed',
+      message: `Job ${job.title} completed by ${userId}`,
+      type : "job_alert"
+    })
+    if(!notification) {
+      console.error('Error sending notification');
+    } else{
+      console.log('Notification sent successfully');
+    }
     await paymentService.createPayments(jobprogressIds, jobId);
     return { success: true, data: updatedProgress };
   } catch (error) {

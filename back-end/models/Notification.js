@@ -8,7 +8,7 @@ const notificationSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   type: {
     type: String,
-    enum: ['job_match', 'contract_update', 'payment', 'rating', 'system_alert', 'interview_schedule', "application_received"]
+    enum: ['job_match', 'contract_update', 'payment', 'rating', 'system_alert', 'interview_schedule', "application_received", "cancelApplication", "generic", "job_alert"]
   },
   tags: [String], // жишээ: ['urgent', 'new_branch', 'disabled_friendly']
   isDeleted: { type: Boolean, default: false }

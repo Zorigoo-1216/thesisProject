@@ -1,4 +1,4 @@
-const NotificationDB = require('../dataAccess/notificationDB');
+const notificationDB = require('../dataAccess/notificationDB');
 const UserDb = require('../dataAccess/userDB');
 const { sendSocketNotification } = require('../socket');
 
@@ -20,16 +20,29 @@ const sendNotification = async (userIds, notificationData) => {
       };
 
       // DB-д хадгалах
-      await NotificationDB.createNotification(notification);
+     const savedNotification = await notificationDB.createNotification(notification);
 
       // Socket-р илгээх (хэрэв онлайн байвал)
-      sendSocketNotification(userId, notification);
+      sendSocketNotification(userId, savedNotification);
+      return savedNotification;
     }
   } catch (error) {
     console.error('❌ sendNotification error:', error.message);
   }
 };
 
+
+const getNotificationsForUser = async (userId) => {
+  return await notificationDB.findByUserId(userId);
+};
+
+const markNotificationAsRead = async (notificationId) => {
+  return await notificationDB.markAsRead(notificationId);
+};
+
+
 module.exports = {
   sendNotification,
+   getNotificationsForUser,
+  markNotificationAsRead,
 };

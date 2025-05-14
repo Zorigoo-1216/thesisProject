@@ -212,7 +212,7 @@ class _CreateJobTabState extends State<CreateJobTab> {
               Expanded(
                 child: _dropdown(
                   'Дүүрэг',
-                  ['БЗД', 'СБД', 'ХУД'],
+                  ['БЗД', 'СБД', 'ХУД', "БГД", "ЧД", "НД", "БНД", "БХД"],
                   selectedDistrict,
                   (val) => setState(() => selectedDistrict = val),
                 ),
@@ -221,7 +221,18 @@ class _CreateJobTabState extends State<CreateJobTab> {
               Expanded(
                 child: _dropdown(
                   'Хороо',
-                  ['1-р хороо', '2-р хороо'],
+                  [
+                    '1-р хороо',
+                    '2-р хороо',
+                    '3-р хороо',
+                    '4-р хороо',
+                    '5-р хороо',
+                    '6-р хороо',
+                    '7-р хороо',
+                    '8-р хороо',
+                    '9-р хороо',
+                    '10-р хороо',
+                  ],
                   selectedKhoroo,
                   (val) => setState(() => selectedKhoroo = val),
                 ),
@@ -257,7 +268,18 @@ class _CreateJobTabState extends State<CreateJobTab> {
           ),
           _dropdown(
             'Ажлын салбар',
-            ['Барилга', 'Үйлчилгээ'],
+            [
+              'Барилга',
+              'Үйлчилгээ',
+              'Тээвэр',
+              "Хоол үйлдвэрлэл",
+              "Худалдаа",
+              "Үйлдвэрлэл",
+              "Боловсрол",
+              "Баяр ёслол, арга хэмжээ",
+              "Хөдөө аж ахуй",
+              "Цэвэрлэгээ",
+            ],
             selectedBranch,
             (val) => setState(() => selectedBranch = val),
           ),

@@ -7,7 +7,7 @@ const contractRoutes = require('./routes/contractRoutes');
 const jobprogressRoutes = require('./routes/jobProgressRoutes');
 const paymentRoutes = require('./routes/paymentRoute');
 const ratingRoutes = require('./routes/ratingRoute');
-
+const notificationRoutes = require('./routes/notificationRoute');
 const cors = require('cors');
 
 require('dotenv').config();
@@ -30,6 +30,7 @@ app.use('/api/jobprogress', jobprogressRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/contracts', contractRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/notifications', notificationRoutes);
 //app.use('/api/ratings', ratingRoutes);
 
 //app.use('/api/contracts', contractRoutes);

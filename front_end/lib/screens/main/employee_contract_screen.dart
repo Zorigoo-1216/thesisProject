@@ -129,10 +129,16 @@ class _EmployeeContractScreenState extends State<EmployeeContractScreen>
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
+          CustomSliverAppBar(
+            showTabs: false,
+            showBack: !isMainTab, // ✅ зөвхөн push-ээр орсон үед харуулна
+            tabs: const [],
+          ),
           SliverFillRemaining(
             child:
                 isLoading

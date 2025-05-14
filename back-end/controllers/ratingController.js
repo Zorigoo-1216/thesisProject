@@ -47,7 +47,7 @@ const getJobRatingsEmployees = async (req, res) => {
     const userId = req.user.id;
     const { jobId } = req.params;
     const result = await ratingService.getJobRatingsEmployees(userId, jobId);
-
+    //console.log("result in getJobRatingsEmployees", result);
     if (!result.success) {
       return res.status(400).json({ success: false, message: result.message });
     }
@@ -90,7 +90,7 @@ const rateEmployee = async (req, res) => {
       }
 
       // Санамсаргүйгээр criteria.score гэж дуудаагүй эсэхийг шалгах
-      console.log("📥 Criteria:", criteria);
+     // console.log("📥 Criteria:", criteria);
 
         const result = await ratingService.rateEmployee(
           userId,
@@ -139,7 +139,7 @@ const checkIfEmployerRated = async (req, res) => {
   try {
     const { jobId } = req.params;
     const userId = req.user.id || req.params.userId || req.user._id;
-    console.log("user id in checkIfEmployerRated", userId);
+    //console.log("user id in checkIfEmployerRated", userId);
     const existing = await ratingService.checkIfEmployerRated(userId, jobId);
 
     return res.status(200).json({

@@ -1,74 +1,63 @@
 import 'package:flutter/material.dart';
 import '../../constant/styles.dart';
+import '../../widgets/custom_sliver_app_bar.dart'; // ← CustomSliverAppBar-ийн замаа зөв заана уу
 
 class JobHistoryScreen extends StatelessWidget {
   const JobHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        title: const Text(
-          "Хийсэн ажлууд",
-          style: TextStyle(color: AppColors.text),
-        ),
-        leading: const BackButton(color: AppColors.text),
-        actions: const [
-          Icon(Icons.notifications_none, color: AppColors.primary),
-          SizedBox(width: 12),
-          Icon(Icons.settings, color: AppColors.primary),
-          SizedBox(width: 12),
-          CircleAvatar(
-            radius: 18,
-            backgroundImage: AssetImage('assets/images/avatar.png'),
-          ),
-          SizedBox(width: 12),
-        ],
-      ),
       backgroundColor: AppColors.background,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          children: [
-            const CircleAvatar(
-              radius: 40,
-              backgroundImage: AssetImage('assets/images/avatar.png'),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const Text("О.Эрдэнэцогт", style: AppTextStyles.heading),
-            const SizedBox(height: AppSpacing.xs),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _infoBox("RATING", "4.5", Icons.star),
-                const SizedBox(width: 12),
-                _infoBox("PROJECTS", "50", Icons.work_outline),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const Text("erdenetsogt@email.com"),
-            const Text("Утас: 8888-8888"),
-            const SizedBox(height: AppSpacing.lg),
+      body: CustomScrollView(
+        slivers: [
+          CustomSliverAppBar(showTabs: false, showBack: !isMainTab),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                children: [
+                  const CircleAvatar(
+                    radius: 40,
+                    backgroundImage: AssetImage('assets/images/avatar.png'),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const Text("О.Эрдэнэцогт", style: AppTextStyles.heading),
+                  const SizedBox(height: AppSpacing.xs),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _infoBox("RATING", "4.5", Icons.star),
+                      const SizedBox(width: 12),
+                      _infoBox("PROJECTS", "50", Icons.work_outline),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  const Text("erdenetsogt@email.com"),
+                  const Text("Утас: 8888-8888"),
+                  const SizedBox(height: AppSpacing.lg),
 
-            // ✅ Job History Cards
-            _jobCard(
-              title: "Барилгын туслах",
-              startDate: "2025.12.16",
-              endDate: "2025.12.20",
-              employerName: "Г.Цолмон",
-              salary: "120000₮ / өдөр",
+                  // ✅ Job History Cards
+                  _jobCard(
+                    title: "Барилгын туслах",
+                    startDate: "2025.12.16",
+                    endDate: "2025.12.20",
+                    employerName: "Г.Цолмон",
+                    salary: "120000₮ / өдөр",
+                  ),
+                  _jobCard(
+                    title: "Зөөврийн ажилтан",
+                    startDate: "2025.10.05",
+                    endDate: "2025.10.08",
+                    employerName: "С.Батмөнх",
+                    salary: "100000₮ / өдөр",
+                  ),
+                ],
+              ),
             ),
-            _jobCard(
-              title: "Зөөврийн ажилтан",
-              startDate: "2025.10.05",
-              endDate: "2025.10.08",
-              employerName: "С.Батмөнх",
-              salary: "100000₮ / өдөр",
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

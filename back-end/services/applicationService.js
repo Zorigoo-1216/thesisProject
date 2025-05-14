@@ -49,12 +49,15 @@ const applyToJob = async (userId, jobId) => {
     try {
       const notificationData = {
         userId: updatedJob.employerId,
-        type: "application",
-        message: `Таны ${updatedJob.title} ажилд ${user.name} хүсэлт илгээжээ`,
+          type: "application_received",
+          title: "Шинэ ажиллах хүсэлт ирлээ",
+          message: `Таны ${updatedJob.title} ажилд ${user.firstName} хүсэлт илгээжээ`,
         };
       const notificationResult = await notificationService.sendNotification(userId, notificationData);
-      if (!notificationResult.success) {
+      if (!notificationResult) {
         console.error("❌ Notification failed:", notificationResult.message);
+      } else {
+        console.log("📨 Notification sent:", notificationData);
       }
     } catch (err) {
       console.error("❌ Notification failed:", err.message);
@@ -210,9 +213,13 @@ const selectCandidatesfromInterview = async (jobId, selectedUserIds) => {
 
     await job.save();
     const userIds  = applications.map((app) => app.userId.toString());
-    await notificationService.sendNotification(userIds, 
+    const result = await notificationService.sendNotification(userIds, 
       { title: job.title, message: `Та ${job.title} ажилд тэнцлээ`, type: 'application_received' });
-    
+    if (!result)  {
+      console.log('Error sending notification:', result);
+    } else {
+      console.log('Notification sent successfully:', result);
+    }
     return { success: true, message: "Сонгогдсон ажилчид амжилттай бүртгэгдлээ" };
   } catch (error) {
     console.error("Error selecting candidates from interview:", error.message);
@@ -257,16 +264,22 @@ const selectCandidates = async (jobId, selectedUserIds) => {
         } else {
           message = `Уучлаарай, "${job.title}" ажилд тэнцээгүй байна`;
         }
-        await notificationService.sendNotification(app.userId.toString(), {
+        const result = await notificationService.sendNotification(app.userId.toString(), {
           title: job.title,
           message,
           type: "application_received",
         });
+        if (!result) {
+          console.log("Error sending notification:", result);
+        } else  {
+          console.log("Notification sent successfully:", result);
+        }
+      
     return Application.findByIdAndUpdate(app._id, { status });
   });
 
   await Promise.all(updates);
-
+ 
   // 🧼 description-ыг string болгож шалгах
   if (typeof job.description !== "string") {
     if (Array.isArray(job.description)) {
@@ -552,9 +565,16 @@ const getCandidatesByJob = async (jobId) => {
 const cancelApplication = async (userId, jobId) => {
   try {
     const job = await JobDb.getJobById(jobId);
+    const user = await userDB.getUserById(userId);
     if (!job) return { success: false, message: "Job not found" };
 
-    await applicationDB.cancelApplication(jobId, userId);
+    const  result = await applicationDB.cancelApplication(jobId, userId);
+    const notResult = await notificationService.sendNotification(job.employerId, {title:"Ажиллах хүсэлт цуцаллаа", message: `${user.name} нэртэй ажилтан хүсэлтээ цуцалсан байна`, type:"cancelApplication"});
+    if( !notResult ) {
+      console.log("Notification sent error");
+    } else {
+      console.log("Notification sent");
+    }
     return { success: true, message: "Application canceled" };
   } catch (error) {
     console.error("Error canceling application:", error.message);

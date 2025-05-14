@@ -142,34 +142,37 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.text,
-                ),
+            flex: 5,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.text,
               ),
             ),
           ),
+          const SizedBox(width: 8),
           Expanded(
-            flex: 5,
-            child: Row(
+            flex: 4,
+            child: Wrap(
+              spacing: 4,
               children: List.generate(5, (index) {
-                return IconButton(
-                  padding: EdgeInsets.zero,
-                  iconSize: 28,
-                  icon: Icon(
-                    index < currentRating ? Icons.star : Icons.star_border,
-                    color: AppColors.primary,
+                return SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      index < currentRating ? Icons.star : Icons.star_border,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
+                    onPressed:
+                        isRated
+                            ? null
+                            : () => setState(() => ratings[key] = index + 1),
                   ),
-                  onPressed:
-                      isRated
-                          ? null
-                          : () => setState(() => ratings[key] = index + 1),
                 );
               }),
             ),
@@ -187,10 +190,11 @@ class _EmployerRateScreenState extends State<EmployerRateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
+          CustomSliverAppBar(showTabs: false, showBack: !isMainTab, tabs: []),
           SliverToBoxAdapter(
             child:
                 loading

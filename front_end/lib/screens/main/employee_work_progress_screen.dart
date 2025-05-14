@@ -135,10 +135,11 @@ class _EmployeeWorkProgressScreenState
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
+          CustomSliverAppBar(showTabs: false, showBack: !isMainTab, tabs: []),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),

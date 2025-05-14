@@ -77,6 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   Widget build(BuildContext context) {
+    //final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -86,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 CustomSliverAppBar(
                   tabController: _tabController,
                   showTabs: true,
-                  showBack: true,
+                  showBack: false,
                   tabs: [],
                 ),
                 SliverToBoxAdapter(

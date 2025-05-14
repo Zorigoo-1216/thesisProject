@@ -105,7 +105,15 @@ const getUserByPhone = async (phone) => {
   }
 };
 
-
+const getTopWorkers = async ()=> {
+  try {
+    const users = await userDB.getTopWorkers();
+    return { success: true, data: users };
+  } catch (error) {
+    console.error('Error getting top workers:', error.message);
+    return { success: false, message: error.message };
+  }
+}
 const updateProfile = async (userId, profileUpdates) => {
   try {
     if (!userId) return { success: false, message: 'User ID is required' };
@@ -153,5 +161,7 @@ module.exports = {
   verifyUser,
   updateProfile,
   deleteUser,
-  getUserByPhone
+  getUserByPhone,
+ getTopWorkers 
+
 };

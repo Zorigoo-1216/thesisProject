@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../../constant/styles.dart';
 import '../../constant/api.dart';
 import '../../models/user_model.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 class ProfileDetailScreen extends StatefulWidget {
   const ProfileDetailScreen({super.key});
@@ -86,8 +87,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
     locationController.text = user.profile?.location ?? '';
     branchController.text = user.profile?.mainBranch ?? '';
     experienceController.text = user.profile?.experienceLevel ?? '';
-    salaryController.text =
-        user.profile?.waitingSalaryPerHour?.toString() ?? '';
+    salaryController.text = user.profile?.waitingSalaryPerHour.toString() ?? '';
     languageController.text = user.profile?.languageSkills.join(', ') ?? '';
     skillController.clear();
   }
@@ -148,8 +148,10 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
@@ -160,44 +162,52 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
   }
 
   Widget _buildMainContent() {
+    //final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
+
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          children: [
-            _buildAppBar(),
-            _buildProfileHeader(),
-            _buildPersonalInfoCard(),
-            _buildWorkInfoCard(),
-            _buildSkillsCard(),
-          ],
-        ),
+      child: CustomScrollView(
+        slivers: [
+          CustomSliverAppBar(showTabs: false, showBack: true),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                children: [
+                  _buildProfileHeader(),
+                  _buildPersonalInfoCard(),
+                  _buildWorkInfoCard(),
+                  _buildSkillsCard(),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAppBar() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        const Text(
-          'Профайл',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const Row(
-          children: [
-            Icon(Icons.notifications_none),
-            SizedBox(width: 12),
-            Icon(Icons.settings),
-          ],
-        ),
-      ],
-    );
-  }
+  // Widget _buildAppBar() {
+  //   return Row(
+  //     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //     children: [
+  //       IconButton(
+  //         icon: const Icon(Icons.arrow_back),
+  //         onPressed: () => Navigator.pop(context),
+  //       ),
+  //       const Text(
+  //         'Профайл',
+  //         style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+  //       ),
+  //       const Row(
+  //         children: [
+  //           Icon(Icons.notifications_none),
+  //           SizedBox(width: 12),
+  //           Icon(Icons.settings),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
 
   Widget _buildProfileHeader() {
     return Center(
@@ -339,7 +349,7 @@ class _ProfileDetailScreenState extends State<ProfileDetailScreen> {
         _buildInfoDisplayRow("Туршлага", user!.profile?.experienceLevel ?? '-'),
         _buildInfoDisplayRow(
           "Цалин",
-          "${user!.profile?.waitingSalaryPerHour?.toStringAsFixed(0) ?? '-'}₮/цаг",
+          "${user!.profile?.waitingSalaryPerHour.toStringAsFixed(0) ?? '-'}₮/цаг",
         ),
         _buildInfoDisplayRow(
           "Хэл",

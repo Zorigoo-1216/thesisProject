@@ -15,7 +15,7 @@ router.put('/profile/:id/update', authMiddleware, userController.updateProfile);
 router.put('/profile/verifyaccount',authMiddleware, userController.verify);  // use case 2.1
 router.delete('/profile', authMiddleware, userController.deleteUser);
 
-
+router.get('/workers', userController.getTopWorkers); // use case 2.2
 
 
 module.exports = router;

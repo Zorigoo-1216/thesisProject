@@ -5,12 +5,12 @@ const viewPaymentInfoByJob = async (req, res) => {
   try {
     const { jobId } = req.params;
     const employerId = req.user.id;
-    console.log('📥 /viewPaymentInfoByJob GET - jobId:', jobId);
+    //console.log('📥 /viewPaymentInfoByJob GET - jobId:', jobId);
     const result = await paymentService.getPaymentsByJob(jobId, employerId);
     if (!result.success) {
       return res.status(400).json({ success: false, message: result.message });
     }
-    console.log('✅ Payment info retrieved successfully:', result.data);
+    //console.log('✅ Payment info retrieved successfully:', result.data);
     res.status(200).json({ success: true, data: result.data });
   } catch (error) {
     console.error('❌ Error in viewPaymentInfoByJob:', error.message);
@@ -63,7 +63,7 @@ const viewPaymentInfoByJobAndUser = async (req, res) => {
     const userId = req.user.id;
     const { jobId } = req.params;
     const result = await paymentService.getPaymentsByJobAndUser(jobId, userId);
-    console.log('✅ Payment info retrieved successfully:', result);
+    //console.log('✅ Payment info retrieved successfully:', result);
     res.json(result);
   }
   catch (error) {

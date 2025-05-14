@@ -47,7 +47,7 @@ const getProfile = async (req, res) => {
     const userId = req.user.id;
     //console.log('📥 /getProfile GET :', userId);
     const result = await userService.getProfile(userId);
-    console.log('📤 /getProfile GET :', result);
+    //console.log('📤 /getProfile GET :', result);
     res.status(200).json({ success: true, data: result });
   } catch (err) {
     console.error('❌ Error in getProfile:', err.message);
@@ -56,7 +56,7 @@ const getProfile = async (req, res) => {
 };
 const updateProfile = async (req, res) => {
   try {
-  console.log('📥 /updateProfile PUT :', req.body);
+  //console.log('📥 /updateProfile PUT :', req.body);
     const userId = req.user.id || req.params.userId || req.user._id;
     const updates = req.body;
     const result = await userService.updateProfile(userId, updates);
@@ -101,7 +101,20 @@ const getUserInfo = async (req, res) => {
   }
 };
 
-
+const getTopWorkers = async (req, res) => {
+  try {
+    //console.log('📥 /fetching top workers GET');
+    const workers = await userService.getTopWorkers();
+    if (!workers) {
+      return res.status(404).json({ success: false, message: 'Top workers not found' });
+    }
+   // console.log('📤 /fetched top workers GET:', workers);
+    res.status(200).json({ success: true, workers: workers.data });
+  } catch (err) {
+    console.error('❌ Error in getTopWorkers:', err.message);
+    res.status(400).json({ success: false, message: err.message });
+  }
+}
 
 module.exports = {
   register,
@@ -110,6 +123,6 @@ module.exports = {
   updateProfile,
   verify,
   deleteUser,
- getUserInfo 
-
+ getUserInfo ,
+ getTopWorkers
 };

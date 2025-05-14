@@ -320,7 +320,7 @@ const getMyAllAppliedJobs = async (req, res) => {
  */
 const getAppliedUsersByJob = async (req, res) => {
   try {
-    console.log("📥 /getAppliedUsersByJob GET in applocationController - req.body:", req.params);
+    //console.log("📥 /getAppliedUsersByJob GET in applocationController - req.body:", req.params);
     const jobId = req.params.jobId || req.body.jobId || req.params.id;
 
     if (!jobId) {
@@ -328,8 +328,8 @@ const getAppliedUsersByJob = async (req, res) => {
     }
 
     const result = await applicationService.getAppliedUsersByJob(jobId);
-    console.log("📥 /getAppliedUsersByJob GET - result:", result);
-    console.log("📥 /getAppliedUsersByJob GET - result.data:", result.data);
+    //console.log("📥 /getAppliedUsersByJob GET - result:", result);
+   // console.log("📥 /getAppliedUsersByJob GET - result.data:", result.data);
     if (result.success) {
       return res.status(200).json({
         success: true,
@@ -396,12 +396,12 @@ const getAppliedUsersByJob = async (req, res) => {
  */
 const getInterviewsByJob = async (req, res) => {
   try {
-    console.log("📥 /get interviews GET in applocationController - req.body:", req.body);
+    //console.log("📥 /get interviews GET in applocationController - req.body:", req.body);
     const jobId = req.params.id || req.body.jobId;
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
 
     const interviews = await applicationService.getInterviewsByJob(jobId);
-    console.log("📥 /get interviews GET - interviews:", interviews);
+   // console.log("📥 /get interviews GET - interviews:", interviews);
     
     if (!interviews) return res.status(400).json({ error: "Interviews not found" });
 
@@ -432,7 +432,7 @@ const getInterviewsByJob = async (req, res) => {
 
 const selectCandidates = async (req, res) => {
   try {
-    console.log("📥 /select-candidates POST in applocationController - req.body:");
+    //console.log("📥 /select-candidates POST in applocationController - req.body:");
     const jobId = req.params.id || req.body.jobId;
     const { selectedUserIds } = req.body;
 
@@ -473,7 +473,7 @@ const selectCandidates = async (req, res) => {
  */
 const selectCandidatesfromInterview = async (req, res) => {
   try {
-    console.log("📥 /select-candidates-from-interview POST in applocationController ");
+    //console.log("📥 /select-candidates-from-interview POST in applocationController ");
     const jobId = req.params.id || req.body.jobId;
     const { selectedUserIds } = req.body;
 
@@ -515,7 +515,7 @@ const selectCandidatesfromInterview = async (req, res) => {
  */
 const getEmployeesByJob = async (req, res) => {
   try {
-    console.log("📥 /get-employees-by-job GET in applocationController ");
+    //console.log("📥 /get-employees-by-job GET in applocationController ");
     const jobId = req.params.id || req.body.jobId;
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
     //console.log("📥 /get employees GET - jobId:", jobId);
@@ -550,7 +550,7 @@ catch (err) {
 
 const getCandidatesByJob = async (req, res) => {
   try {
-    console.log("📥 /get-candidates-by-job GET in applocationController ");
+    //console.log("📥 /get-candidates-by-job GET in applocationController ");
     const jobId = req.params.id || req.body.jobId;
     if (!jobId) return res.status(400).json({ error: "Job ID required" });
     const candidates = await applicationService.getCandidatesByJob(jobId);

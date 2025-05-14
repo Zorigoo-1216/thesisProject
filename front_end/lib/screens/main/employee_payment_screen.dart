@@ -24,6 +24,16 @@ class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
     loadPayment();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Хуудас руу орох бүрт мэдээллийг шинэчлэх
+    setState(() {
+      loading = true; // Шинэчлэлтийн үед ачаалж байгааг харуулах
+    });
+    loadPayment();
+  }
+
   Future<void> loadPayment() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
@@ -70,7 +80,7 @@ class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
   Future<void> markAsPaid() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token') ?? '';
-    final userId = prefs.getString('userId') ?? '';
+    //final userId = prefs.getString('userId') ?? '';
 
     final res = await http.put(
       Uri.parse('${baseUrl}payments/${widget.jobId}/${payment!['_id']}'),
@@ -120,10 +130,16 @@ class _EmployeePaymentScreenState extends State<EmployeePaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
+          CustomSliverAppBar(
+            showTabs: false,
+            showBack: !isMainTab, // ✅ зөвхөн push-ээр орсон үед харагдана
+            tabs: const [],
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),

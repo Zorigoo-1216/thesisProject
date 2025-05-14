@@ -1,6 +1,21 @@
 // 📁 controllers/jobController.js
 const jobService = require('../services/JobService');
 
+const getTopJobs = async (req, res) => {
+  try {
+    //console.log ("📥 /topjobs GET :");
+    const jobs = await jobService.getTopJobs();
+    //console.log(" jobs: ", jobs.data);
+   if (!jobs || !jobs.success) {
+      return res.status(404).json({ success: false, message: 'No jobs found' });
+    }
+      return res.status(200).json({ success: true, jobs: jobs.data });
+  } catch (error) {
+    console.error('❌ Error fetching top jobs:', error.message);
+    return res.status(500).json({ success: false, message: 'Internal Server Error' });
+  }
+}
+
 
 /**
  * @api {post} /job/create Create a job
@@ -81,11 +96,11 @@ const createJob = async (req, res) => {
  */
 const getEmployerByJobId = async (req, res) => {
   try {
-    console.log ("📥 /get-employer-by-job-id GET :");
+    //console.log ("📥 /get-employer-by-job-id GET :");
     const jobId = req.params.jobId || req.body.jobId ;
     //console.log(jobId);
     const employer = await jobService.getEmployerByJobId(jobId);
-    console.log(" employer: ", employer.data);
+   // console.log(" employer: ", employer.data);
     return res.status(200).json({ success: true, message: 'Employer fetched successfully', employer : employer.data });
   } catch (error) {
     console.error('❌ Error fetching employer:', error.message);
@@ -147,7 +162,7 @@ const searchJobs = async (req, res) => {
   try {
     const filter = req.query;
     const jobs = await jobService.searchJobs(filter);
-    console.log('Job list fetched successfully:', jobs);
+    //console.log('Job list fetched successfully:', jobs);
     return res.status(200).json({
       success: true,
       message: 'Job list fetched successfully',
@@ -243,7 +258,13 @@ const getSuitableWorkersByJob = async (req, res) => {
     if (!jobId) return res.status(400).json({ success: false, message: 'Job ID required' });
 
     const workers = await jobService.getSuitableWorkersByJob(jobId);
-    return res.status(200).json({ success: true, message: 'Suitable workers fetched successfully', workers: workers || [] });
+    
+    console.log('Suitable workers fetched successfully:', workers);
+    return res.status(200).json({
+      success: true,
+      message: 'Suitable workers fetched successfully',
+      workers, // ⬅️ no need to wrap inside { user: ... }
+    });
   } catch (error) {
     console.error('❌ Error fetching suitable workers by job:', error.message);
     return res.status(500).json({ success: false, message: 'Internal Server Error' });
@@ -261,5 +282,6 @@ module.exports = {
   deleteJob,
   getMyPostedJobs,
   getSuitableWorkersByJob,
-  getEmployerByJobId
+  getEmployerByJobId,
+  getTopJobs
 };

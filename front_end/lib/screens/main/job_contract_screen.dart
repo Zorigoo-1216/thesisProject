@@ -6,6 +6,7 @@ import 'package:flutter_html/flutter_html.dart';
 import '../../constant/styles.dart';
 import '../../constant/api.dart';
 import '../../models/user_model.dart';
+import '../../widgets/custom_sliver_app_bar.dart';
 
 // ... (import-ууд)
 class JobContractScreen extends StatefulWidget {
@@ -36,12 +37,14 @@ class _JobContractScreenState extends State<JobContractScreen>
     {
       "name": "Хөдөлмөрийн гэрээ",
       "templateName": "employment_contract",
-      "summary": "Хөдөлмөрийн гэрээний товч танилцуулга...",
+      "summary":
+          "Ажилтны байнгын хөдөлмөр эрхлэх нөхцөл, үүрэг, цалин хөлс, нийгмийн даатгалын зохицуулалт. Ажлын байрны тодорхойлолт, ажиллах цагийн хуваарь, ажлын аюулгүй байдал болон тэтгэмжийн талаар тусгасан.",
     },
     {
       "name": "Хөлсөөр ажиллуулах гэрээ",
       "templateName": "wage_contract",
-      "summary": "Хөлсөөр гэрээний товч танилцуулга...",
+      "summary":
+          "Тодорхой хугацааны туршид гүйцэтгэх ажил, үйлчилгээний нөхцөл, хөлс төлөлт, үүрэг хариуцлага. Ажил гүйцэтгэгчийн эрх, ажил олгогчийн үүрэг, гэрээ дуусгавар болох нөхцөл болон төлбөрийн зохицуулалтыг багтаасан.",
     },
   ];
 
@@ -53,12 +56,26 @@ class _JobContractScreenState extends State<JobContractScreen>
     loadInitialData();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Хуудас руу орох бүрт мэдээллийг шинэчлэх
+    setState(() {
+      isLoading = true;
+    });
+    loadInitialData();
+  }
+
   Future<void> loadInitialData() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      initControllerDone = false;
+    });
+
     await checkIfContractTemplateExists();
     await fetchEmployees();
 
-    if (hasTemplate) {
+    if (hasTemplate && _tabController == null) {
       final safeIndex = widget.initialTabIndex.clamp(0, 2);
       _tabController = TabController(
         length: 3,
@@ -190,12 +207,15 @@ class _JobContractScreenState extends State<JobContractScreen>
           contractHtml = html;
           summaryHtml = summary;
 
-          /// ❗ ЭНД ШИНЭЭР TabController үүсгэнэ
           _tabController = TabController(
             length: 3,
             vsync: this,
             initialIndex: 0,
           );
+
+          initControllerDone =
+              true; // ✅ controller үүссэн гэдгийг баталгаажуулсан
+          isLoading = false;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -436,55 +456,115 @@ class _JobContractScreenState extends State<JobContractScreen>
   }
 
   Widget _contractItem(String title, String desc, String templateName) {
-    return Column(
-      children: [
-        Text(title, style: AppTextStyles.heading),
-        const SizedBox(height: 4),
-        Text(desc, textAlign: TextAlign.center, style: AppTextStyles.subtitle),
-        const SizedBox(height: 12),
-        ElevatedButton(
-          onPressed: () => _generateTemplateAndSign(templateName),
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-          child: const Text("Сонгох", style: TextStyle(color: Colors.white)),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.description, size: 48, color: AppColors.primary),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: AppTextStyles.heading.copyWith(fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Text(
+              desc,
+              style: AppTextStyles.subtitle,
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _generateTemplateAndSign(templateName),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              child: const Text(
+                "Сонгох",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildTemplateSelectionScreen() {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Гэрээний загвар сонгох")),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Та гэрээний загварыг сонгоно уу",
-              style: AppTextStyles.heading,
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: List.generate(templates.length, (index) {
-                return Expanded(
-                  child: _contractItem(
-                    templates[index]['name']!,
-                    templates[index]['summary']!,
-                    templates[index]['templateName']!,
+      body: CustomScrollView(
+        slivers: [
+          CustomSliverAppBar(showTabs: false, showBack: !isMainTab),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Та гэрээний загварыг сонгоно уу",
+                    style: AppTextStyles.heading,
                   ),
-                );
-              }),
+                  const SizedBox(height: 20),
+
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: templates.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                          childAspectRatio: 0.85,
+                        ),
+                    itemBuilder: (context, index) {
+                      final item = templates[index];
+                      return _contractItem(
+                        item['name']!,
+                        item['summary']!,
+                        item['templateName']!,
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading || (hasTemplate && !initControllerDone)) {
+    debugPrint(
+      "🔄 build: isLoading=$isLoading | hasTemplate=$hasTemplate | initControllerDone=$initControllerDone | tabController=${_tabController != null}",
+    );
+
+    if (isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (hasTemplate && (!initControllerDone || _tabController == null)) {
+      return const Scaffold(
+        body: Center(child: Text("Гэрээ ачааллаж байна...")),
+      );
     }
 
     return hasTemplate
@@ -493,32 +573,34 @@ class _JobContractScreenState extends State<JobContractScreen>
   }
 
   Widget _buildExistingContractTabs() {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     if (_tabController == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Гэрээний удирдлага"),
-        bottom: TabBar(
+      body: NestedScrollView(
+        headerSliverBuilder:
+            (context, innerBoxIsScrolled) => [
+              CustomSliverAppBar(
+                tabController: _tabController,
+                showTabs: true,
+                showBack: !isMainTab,
+                tabs: const [
+                  Tab(text: "Гэрээ"),
+                  Tab(text: "Хураангуй"),
+                  Tab(text: "Ажилчид"),
+                ],
+              ),
+            ],
+        body: TabBarView(
           controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: AppColors.primary,
-          tabs: const [
-            Tab(text: "Гэрээ"),
-            Tab(text: "Хураангуй"),
-            Tab(text: "Ажилчид"),
+          children: [
+            _contractHtmlView(contractHtml),
+            _contractHtmlView(summaryHtml),
+            _buildEmployeesTab(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _contractHtmlView(contractHtml),
-          _contractHtmlView(summaryHtml),
-          _buildEmployeesTab(),
-        ],
       ),
     );
   }

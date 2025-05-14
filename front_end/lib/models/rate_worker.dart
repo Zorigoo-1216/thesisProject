@@ -3,12 +3,14 @@ class RateWorker {
   final String name;
   final String phone;
   final String role;
+  final bool alreadyRated;
 
   RateWorker({
     required this.id,
     required this.name,
     required this.phone,
     required this.role,
+    required this.alreadyRated,
   });
 
   factory RateWorker.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class RateWorker {
       name: json['name'],
       phone: json['phone'],
       role: json['role'],
+      alreadyRated: json['alreadyRated'] ?? false,
     );
   }
 }

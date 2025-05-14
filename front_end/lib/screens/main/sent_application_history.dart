@@ -7,10 +7,11 @@ class SentApplicationHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showBack: true, showTabs: false, tabs: []),
+          CustomSliverAppBar(showBack: true, showTabs: !isMainTab, tabs: []),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),

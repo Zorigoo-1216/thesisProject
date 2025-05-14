@@ -34,7 +34,10 @@ class CustomSliverAppBar extends StatelessWidget {
       leading:
           showBack
               ? IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.text),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.primary, // 🎯 Энд өнгөө өөрчил
+                ),
                 onPressed: () {
                   Navigator.pop(context);
                 },

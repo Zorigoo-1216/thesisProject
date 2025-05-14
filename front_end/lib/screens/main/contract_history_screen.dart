@@ -7,10 +7,16 @@ class ContractHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isMainTab = ModalRoute.of(context)?.isFirst ?? false;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          const CustomSliverAppBar(showTabs: false, showBack: true, tabs: []),
+          CustomSliverAppBar(
+            showTabs: false,
+            showBack: !isMainTab, // 🔙 зөвхөн stack navigation үед л харуулна
+            tabs: const [],
+          ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.md),

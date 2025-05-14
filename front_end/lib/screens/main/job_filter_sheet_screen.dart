@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../constant/styles.dart';
 
 class JobFilterSheet extends StatefulWidget {
@@ -17,6 +18,38 @@ class _JobFilterSheetState extends State<JobFilterSheet> {
   double maxSalary = 200000;
 
   bool isRecommendedTab = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadInitialData(); // Эхний удаад өгөгдлийг ачаална
+  }
+
+  Future<void> loadInitialData() async {
+    // Энд шаардлагатай өгөгдлийг ачаална
+    // Жишээ нь, SharedPreferences эсвэл API-аас өгөгдөл татах
+    final prefs = await SharedPreferences.getInstance();
+    final savedCategory = prefs.getString('selectedCategory');
+    final savedLocation = prefs.getString('selectedLocation');
+    final savedMinSalary = prefs.getDouble('minSalary') ?? 10000;
+    final savedMaxSalary = prefs.getDouble('maxSalary') ?? 200000;
+
+    setState(() {
+      selectedCategory = savedCategory;
+      selectedLocation = savedLocation;
+      minSalary = savedMinSalary;
+      maxSalary = savedMaxSalary;
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Хуудас руу орох бүрт өгөгдлийг шинэчлэх
+    setState(() {
+      loadInitialData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

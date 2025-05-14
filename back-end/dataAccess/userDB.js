@@ -298,7 +298,20 @@ const updateEmployerAverageRating = async (userId) => {
   });
   console.log("updated employer", updated);
 };
+const getTopWorkers = async () => {
+  try {
+    // Ажилчдыг хайх, 'individual' role-той хэрэглэгчдийг 'averageRating.overall' буурах дарааллаар эрэмбэлэх
+    const users = await User.find({ role: 'individual', 'averageRating.overall': { $exists: true } })
+      .sort({ 'averageRating.overall': -1 }) // Буурах дарааллаар эрэмбэлэх
+      .limit(5); // Эхний 5 ажилтныг авах
 
+    // Хэрэглэгчийн мэдээллийг буцаах
+    return users.map(user => ({viewUserDTO: new viewUserDTO(user) }));
+  } catch (error) {
+    console.error('❌ Error in getTopWorkers:', error.message);
+    throw new Error('Failed to fetch top workers');
+  }
+};
 module.exports = {
   checkUserbyEmail,
   checkUserbyPhoneNumber,
@@ -322,5 +335,6 @@ module.exports = {
   getUsersByIds,
   updateEmployeeAverageRating,
   updateEmployerAverageRating,
-  updateEmployeeBranchReview
+  updateEmployeeBranchReview,
+  getTopWorkers
 };
